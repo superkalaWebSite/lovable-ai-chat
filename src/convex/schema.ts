@@ -112,7 +112,19 @@ const schema = defineSchema(
       createdAt: v.number(),
       /** پشتیبانی و مدیران می‌توانند نظر را لایک کنند تا کاربر حس دیده شدن کند */
       likedBy: v.optional(v.array(v.id("accounts"))),
-    }).index("by_createdAt", ["createdAt"])
+    }).index("by_createdAt", ["createdAt"]),
+
+    /** بنر تبلیغاتی صفحه اصلی (فقط یک رکورد نگه داشته می‌شود) */
+    promos: defineTable({
+      badge: v.string(),
+      title: v.string(),
+      highlight: v.string(),
+      description: v.string(),
+      buttonLabel: v.string(),
+      buttonLink: v.string(),
+      active: v.boolean(),
+      updatedAt: v.number(),
+    }).index("by_updatedAt", ["updatedAt"])
   },
   {
     schemaValidation: false,

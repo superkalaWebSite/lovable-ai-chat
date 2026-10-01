@@ -65,6 +65,7 @@ export default function Landing() {
   const { canLike, likeCount, isLiked, toggleLike } = useReviewLikes();
   const products = useQuery(api.products.list);
   const reviews = useQuery(api.reviews.list);
+  const promo = useQuery(api.promo.get);
   const navigate = useNavigate();
   const [term, setTerm] = useState("");
   const [selected, setSelected] = useState<Doc<"products"> | null>(null);
@@ -106,7 +107,7 @@ export default function Landing() {
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pt-12 pb-32 lg:grid-cols-2 lg:pt-20 lg:pb-40">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <Badge className="rounded-full border border-foreground/10 bg-card/85 px-3 py-1 text-foreground shadow-sm">
-              🔥 جشنواره تخفیف پاییزه — تا ۴۰٪ تخفیف
+              {promo?.badge ?? "🔥 جشنواره تخفیف پاییزه — تا ۴۰٪ تخفیف"}
             </Badge>
 
             <h1 className="mt-5 text-4xl font-black leading-[1.35] tracking-tight text-foreground [text-shadow:0_2px_22px_rgba(255,255,255,0.95)] sm:text-5xl lg:text-6xl">
@@ -334,6 +335,7 @@ export default function Landing() {
       </section>
 
       {/* ───────────── بنر پیشنهاد ویژه ───────────── */}
+      {promo?.active !== false && (
       <section className="mx-auto mt-16 max-w-7xl px-4">
         <div className="grid gap-6 overflow-hidden rounded-3xl bg-foreground p-6 text-white sm:p-8 lg:grid-cols-[1.2fr_1fr]">
           <div className="flex flex-col justify-center">
@@ -341,17 +343,21 @@ export default function Landing() {
               ⏳ پیشنهاد شگفت‌انگیز امروز
             </span>
             <h2 className="mt-4 text-2xl font-black leading-9 sm:text-3xl">
-              روی محصولات منتخب تا{" "}
-              <span className="text-green-400">۴۰٪ تخفیف</span> — تا پایان
-              امروز!
+              {promo?.title ?? "روی محصولات منتخب تا"}{" "}
+              <span className="text-green-400">
+                {promo?.highlight ?? "۴۰٪ تخفیف"}
+              </span>{" "}
+              — تا پایان امروز!
             </h2>
             <p className="mt-2 text-sm leading-7 text-white/60">
-              موجودی محدوده؛ همین الان سفارش بده تا فردا ارسال بشه.
+              {promo?.description ??
+                "موجودی محدوده؛ همین الان سفارش بده تا فردا ارسال بشه."}
             </p>
             <div className="mt-5">
               <Button size="lg" className="h-12 w-fit gap-2 rounded-2xl bg-green-600 text-white hover:bg-green-700" asChild>
-                <Link to="/shop">
-                  دیدن تخفیف‌ها <ArrowLeft className="size-4" />
+                <Link to={promo?.buttonLink ?? "/shop"}>
+                  {promo?.buttonLabel ?? "دیدن تخفیف‌ها"}{" "}
+                  <ArrowLeft className="size-4" />
                 </Link>
               </Button>
             </div>
@@ -411,6 +417,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ───────────── نظرات کاربران (حداکثر ۵) ───────────── */}
       <section className="mx-auto mt-16 max-w-7xl px-4">

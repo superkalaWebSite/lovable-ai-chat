@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -49,10 +49,12 @@ import {
   AlertTriangle,
   ArrowLeft,
   Loader2,
+  Megaphone,
   MessageCircle,
   Package,
   Pencil,
   Plus,
+  Save,
   Send,
   ShieldCheck,
   ShoppingCart,
@@ -100,6 +102,9 @@ export default function AdminPage() {
   const reviewBanMutation = useMutation(api.punishments.setReviewBan);
   const reviewUpdateMutation = useMutation(api.reviews.update);
   const reviewRemoveMutation = useMutation(api.reviews.remove);
+  const promoSaveMutation = useMutation(api.promo.save);
+  const promoRemoveMutation = useMutation(api.promo.remove);
+  const promo = useQuery(api.promo.get);
 
   const [tab, setTab] = useState("stats");
   const [formOpen, setFormOpen] = useState(false);
@@ -195,7 +200,16 @@ export default function AdminPage() {
    */
   const allowedTabs: string[] = useMemo(() => {
     if (isOwner) {
-      return ["stats", "products", "chat", "orders", "punish", "roles", "reviews"];
+      return [
+        "stats",
+        "products",
+        "chat",
+        "orders",
+        "punish",
+        "roles",
+        "reviews",
+        "promo",
+      ];
     }
     if (isAdmin) return ["products", "chat", "punish"];
     return ["chat"];
@@ -280,6 +294,37 @@ export default function AdminPage() {
     try {
       await roleMutation({ token, accountId, role });
       toast.success(`مقام کاربر «${roleInfo(role).label}» شد 👑`);
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  /** ذخیره متن‌های بنر صفحه اصلی */
+  const savePromo = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const data = new FormData(event.currentTarget);
+    try {
+      await promoSaveMutation({
+        token,
+        badge: String(data.get("promoBadge") ?? ""),
+        title: String(data.get("promoTitle") ?? ""),
+        highlight: String(data.get("promoHighlight") ?? ""),
+        description: String(data.get("promoDescription") ?? ""),
+        buttonLabel: String(data.get("promoButtonLabel") ?? ""),
+        buttonLink: String(data.get("promoButtonLink") ?? ""),
+        active: data.get("promoActive") === "on",
+      });
+      toast.success("بنر صفحه اصلی ذخیره شد ✅");
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  /** حذف کامل بنر — متن‌های پیش‌فرض برمی‌گردند */
+  const resetPromo = async () => {
+    try {
+      await promoRemoveMutation({ token });
+      toast.success("بنر حذف شد — متن‌های پیش‌فرض برگشت 🗑️");
     } catch (error) {
       toast.error(friendlyError(error));
     }
@@ -550,6 +595,11 @@ export default function AdminPage() {
           {allowedTabs.includes("reviews") && (
             <TabsTrigger value="reviews" className="shrink-0 rounded-full">
               💬 نظرها
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("promo") && (
+            <TabsTrigger value="promo" className="shrink-0 rounded-full">
+              📣 بنر صفحه اصلی
             </TabsTrigger>
           )}
         </TabsList>
@@ -1323,6 +1373,108 @@ export default function AdminPage() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        {/* ───── بنر صفحه اصلی ───── */}
+        <TabsContent value="promo" className="mt-6">
+          <Card className="rounded-2xl border-border/70 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Megaphone className="size-4 text-primary" /> متن‌های بنر صفحه
+                اصلی
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                همین متن‌ها بالای صفحه اصلی (نوار جشنواره) و داخل بنر مشکی
+                پیشنهاد ویژه نشان داده می‌شوند. اگر «نمایش بنر» را خاموش کنی،
+                کل بنر از صفحه اصلی حذف می‌شود.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={savePromo} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="promoBadge">نوار بالای صفحه</Label>
+                    <Input
+                      id="promoBadge"
+                      name="promoBadge"
+                      defaultValue={promo?.badge ?? ""}
+                      placeholder="🔥 جشنواره تخفیف پاییزه — تا ۴۰٪ تخفیف"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="promoTitle">شروع عنوان بنر</Label>
+                    <Input
+                      id="promoTitle"
+                      name="promoTitle"
+                      defaultValue={promo?.title ?? ""}
+                      placeholder="روی محصولات منتخب تا"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="promoHighlight">بخش سبزرنگ عنوان</Label>
+                    <Input
+                      id="promoHighlight"
+                      name="promoHighlight"
+                      defaultValue={promo?.highlight ?? ""}
+                      placeholder="۴۰٪ تخفیف"
+                    />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="promoDescription">توضیح بنر</Label>
+                    <Textarea
+                      id="promoDescription"
+                      name="promoDescription"
+                      defaultValue={promo?.description ?? ""}
+                      placeholder="موجودی محدوده؛ همین الان سفارش بده تا فردا ارسال بشه."
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="promoButtonLabel">متن دکمه</Label>
+                    <Input
+                      id="promoButtonLabel"
+                      name="promoButtonLabel"
+                      defaultValue={promo?.buttonLabel ?? ""}
+                      placeholder="دیدن تخفیف‌ها"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="promoButtonLink">لینک دکمه</Label>
+                    <Input
+                      id="promoButtonLink"
+                      name="promoButtonLink"
+                      defaultValue={promo?.buttonLink ?? ""}
+                      placeholder="/shop"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 text-sm font-bold">
+                  <input
+                    type="checkbox"
+                    name="promoActive"
+                    defaultChecked={promo?.active ?? true}
+                    className="size-4 accent-primary"
+                  />
+                  نمایش بنر در صفحه اصلی
+                </label>
+
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit" className="gap-2 rounded-xl">
+                    <Save className="size-4" /> ذخیره تغییرات
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="gap-2 rounded-xl text-destructive"
+                    onClick={() => void resetPromo()}
+                  >
+                    <Trash2 className="size-4" /> حذف بنر و برگشت به متن
+                    پیش‌فرض
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 

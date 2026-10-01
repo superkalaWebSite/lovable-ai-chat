@@ -56,6 +56,7 @@ import {
   Send,
   ShieldCheck,
   ShoppingCart,
+  Star,
   Trash2,
   Upload,
   Users,
@@ -86,6 +87,7 @@ export default function AdminPage() {
     api.punishments.listUsers,
     token && isAdmin ? { token } : "skip",
   );
+  const reviews = useQuery(api.reviews.list);
 
   const addMutation = useMutation(api.products.add);
   const updateMutation = useMutation(api.products.update);
@@ -95,6 +97,9 @@ export default function AdminPage() {
   const supportBanMutation = useMutation(api.punishments.setSupportBan);
   const discountBanMutation = useMutation(api.punishments.setDiscountBan);
   const roleMutation = useMutation(api.accounts.setRole);
+  const reviewBanMutation = useMutation(api.punishments.setReviewBan);
+  const reviewUpdateMutation = useMutation(api.reviews.update);
+  const reviewRemoveMutation = useMutation(api.reviews.remove);
 
   const [tab, setTab] = useState("stats");
   const [formOpen, setFormOpen] = useState(false);
@@ -106,6 +111,15 @@ export default function AdminPage() {
   const [image, setImage] = useState<string | undefined>(undefined);
   const [imageBusy, setImageBusy] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState<Doc<"reviews"> | null>(
+    null,
+  );
+  const [deletingReview, setDeletingReview] = useState<Doc<"reviews"> | null>(
+    null,
+  );
+  const [reviewText, setReviewText] = useState("");
+  const [reviewRating, setReviewRating] = useState(5);
 
   type InboxItem = NonNullable<typeof inbox>[number];
   const threads = useMemo(() => {
@@ -216,18 +230,19 @@ export default function AdminPage() {
     } catch (error) {
       toast.error(friendlyError(error));
     }
-  };
-
-  const applyBan = async (
-    kind: "support" | "discount",
+  };  const applyBan = async (
+    kind: "support" | "discount" | "review",
     accountId: Id<"accounts">,
     days: number,
   ) => {
     try {
       if (kind === "support") {
-        await supportBanMutation({ token, accountId, days });        } else {
-          await discountBanMutation({ token, accountId, days });
-        }
+        await supportBanMutation({ token, accountId, days });
+      } else if (kind === "discount") {
+        await discountBanMutation({ token, accountId, days });
+      } else {
+        await reviewBanMutation({ token, accountId, days });
+      }
         if (days === -1) {
           toast.success("مجازت همیشگی اعمال شد ♾️");
           return;
@@ -326,6 +341,53 @@ export default function AdminPage() {
       await removeMutation({ token, id: deleting._id });
       toast.success(`«${deleting.title}» حذف شد`);
       setDeleting(null);
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** ویرایش نظر کاربر */
+  const openReviewEditor = (review: Doc<"reviews">) => {
+    setEditingReview(review);
+    setReviewText(review.text);
+    setReviewRating(review.rating);
+    setReviewOpen(true);
+  };
+
+  const saveReview = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingReview) return;
+    if (reviewText.trim().length < 5) {
+      toast.error("متن نظر را کامل بنویسید (حداقل ۵ حرف).");
+      return;
+    }
+    setBusy(true);
+    try {
+      await reviewUpdateMutation({
+        token,
+        reviewId: editingReview._id,
+        text: reviewText.trim(),
+        rating: reviewRating,
+      });
+      toast.success("نظر ویرایش شد ✏️");
+      setReviewOpen(false);
+      setEditingReview(null);
+    } catch (error) {
+      toast.error(friendlyError(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDeleteReview = async () => {
+    if (!deletingReview) return;
+    setBusy(true);
+    try {
+      await reviewRemoveMutation({ token, reviewId: deletingReview._id });
+      toast.success("نظر حذف شد");
+      setDeletingReview(null);
     } catch (error) {
       toast.error(friendlyError(error));
     } finally {
@@ -451,6 +513,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="roles" className="shrink-0 rounded-full">
             👑 مقام‌ها
+          </TabsTrigger>
+          <TabsTrigger value="reviews" className="shrink-0 rounded-full">
+            💬 نظرها
           </TabsTrigger>
         </TabsList>
 
@@ -986,6 +1051,66 @@ export default function AdminPage() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* مجازات ثبت نظر */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span
+                          className={`rounded-full px-2.5 py-1 font-bold ${
+                            account.reviewBanned
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {account.reviewBanned
+                            ? `⛔ ثبت نظر غیرفعال ${banLabel(
+                                account.reviewBannedUntil,
+                                account.reviewBannedForever,
+                              )}`
+                            : "✅ می‌تواند نظر بدهد"}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("review", account._id, 1)
+                            }
+                          >
+                            ۱ روز نظر
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("review", account._id, 3)
+                            }
+                          >
+                            ۳ روز نظر
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs text-destructive hover:text-destructive"
+                            onClick={() =>
+                              void applyBan("review", account._id, -1)
+                            }
+                          >
+                            ♾️ همیشگی
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
+                            onClick={() =>
+                              void applyBan("review", account._id, 0)
+                            }
+                          >
+                            رفع
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -1078,6 +1203,89 @@ export default function AdminPage() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ───── مدیریت نظرها ───── */}
+        <TabsContent value="reviews" className="mt-6">
+          <div className="mb-4 rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-xs leading-6 text-muted-foreground">
+            💬 اینجا می‌توانی نظرهای کاربران را{" "}
+            <b className="text-foreground">ویرایش</b> یا{" "}
+            <b className="text-foreground">حذف</b> کنی. لایک‌هایی که پشتیبانی
+            روی نظرها گذاشته دست‌نخورده می‌ماند.
+          </div>
+
+          {reviews === undefined ? (
+            <Skeleton className="h-32 rounded-2xl" />
+          ) : reviews.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 py-16 text-center">
+              <span className="text-5xl">💬</span>
+              <h3 className="mt-3 font-black">هنوز نظری ثبت نشده</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                به‌محض ثبت نظر کاربران، اینجا نمایش داده می‌شود.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((review) => (
+                <Card
+                  key={review._id}
+                  className="rounded-2xl border-border/70 shadow-sm"
+                >
+                  <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-black text-primary">
+                          {review.name.slice(0, 1)}
+                        </span>
+                        <p className="text-sm font-black">{review.name}</p>
+                        <span className="flex gap-0.5">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star
+                              key={index}
+                              className={`size-3.5 ${
+                                index < review.rating
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-muted-foreground/40"
+                              }`}
+                            />
+                          ))}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {formatDate(review.createdAt)}
+                        </span>
+                        {(review.likedBy?.length ?? 0) > 0 && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                            ❤️ {(review.likedBy?.length ?? 0).toLocaleString("fa-IR")}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                        «{review.text}»
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 gap-1 rounded-lg text-xs"
+                        onClick={() => openReviewEditor(review)}
+                      >
+                        <Pencil className="size-3.5" /> ویرایش
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 gap-1 rounded-lg text-xs text-destructive hover:text-destructive"
+                        onClick={() => setDeletingReview(review)}
+                      >
+                        <Trash2 className="size-3.5" /> حذف
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </TabsContent>
@@ -1312,6 +1520,108 @@ export default function AdminPage() {
               onClick={(event) => {
                 event.preventDefault();
                 void confirmDelete();
+              }}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              بله، حذف شود
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ───── دیالوگ ویرایش نظر ───── */}
+      <Dialog
+        open={reviewOpen}
+        onOpenChange={(open) => {
+          setReviewOpen(open);
+          if (!open) setEditingReview(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>ویرایش نظر</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={saveReview} className="space-y-4">
+            <div className="rounded-xl bg-muted/60 px-3 py-2 text-sm font-bold">
+              {editingReview?.name}
+            </div>
+
+            <div className="space-y-2">
+              <Label>امتیاز</Label>
+              <div className="flex gap-1">
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const value = index + 1;
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setReviewRating(value)}
+                      aria-label={`${value} ستاره`}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`size-7 ${
+                          value <= reviewRating
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-muted-foreground/40"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="review-edit-text">متن نظر</Label>
+              <Textarea
+                id="review-edit-text"
+                value={reviewText}
+                onChange={(event) => setReviewText(event.target.value)}
+                rows={4}
+                maxLength={600}
+              />
+              <p className="text-xs text-muted-foreground">
+                {reviewText.length.toLocaleString("fa-IR")} از ۶۰۰ کاراکتر
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReviewOpen(false)}
+              >
+                انصراف
+              </Button>
+              <Button type="submit" className="gap-2" disabled={busy}>
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                ذخیره تغییرات
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ───── دیالوگ حذف نظر ───── */}
+      <AlertDialog
+        open={deletingReview !== null}
+        onOpenChange={(open) => !open && setDeletingReview(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف نظر؟</AlertDialogTitle>
+            <AlertDialogDescription>
+              نظر «{deletingReview?.name}» برای همه حذف می‌شود و قابل بازگشت
+              نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                void confirmDeleteReview();
               }}
               className="bg-destructive text-white hover:bg-destructive/90"
             >

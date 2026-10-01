@@ -59,6 +59,7 @@ export function publicAccount(account: Doc<"accounts">) {
     createdAt: account.createdAt,
     supportBannedUntil: account.supportBannedUntil ?? 0,
     discountBannedUntil: account.discountBannedUntil ?? 0,
+    reviewBannedUntil: account.reviewBannedUntil ?? 0,
   };
 }
 

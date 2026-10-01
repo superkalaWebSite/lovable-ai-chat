@@ -24,12 +24,16 @@ export const listUsers = query({
         createdAt: account.createdAt,
         supportBannedUntil: account.supportBannedUntil ?? 0,
         discountBannedUntil: account.discountBannedUntil ?? 0,
+        reviewBannedUntil: account.reviewBannedUntil ?? 0,
         supportBanned: (account.supportBannedUntil ?? 0) > now,
         discountBanned: (account.discountBannedUntil ?? 0) > now,
+        reviewBanned: (account.reviewBannedUntil ?? 0) > now,
         supportBannedForever:
           (account.supportBannedUntil ?? 0) - now > FOREVER_THRESHOLD,
         discountBannedForever:
           (account.discountBannedUntil ?? 0) - now > FOREVER_THRESHOLD,
+        reviewBannedForever:
+          (account.reviewBannedUntil ?? 0) - now > FOREVER_THRESHOLD,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
   },
@@ -38,7 +42,7 @@ export const listUsers = query({
 async function setBan(
   ctx: MutationCtx,
   args: { token: string; accountId: Id<"accounts">; days: number },
-  field: "supportBannedUntil" | "discountBannedUntil",
+  field: "supportBannedUntil" | "discountBannedUntil" | "reviewBannedUntil",
 ) {
   const manager = await requireAdmin(ctx, args.token);
   // ۰ = رفع مجازات، ۱ تا ۳۰ = روز، -۱ = همیشگی
@@ -58,8 +62,10 @@ async function setBan(
         : 0;
   if (field === "supportBannedUntil") {
     await ctx.db.patch(args.accountId, { supportBannedUntil: until });
-  } else {
+  } else if (field === "discountBannedUntil") {
     await ctx.db.patch(args.accountId, { discountBannedUntil: until });
+  } else {
+    await ctx.db.patch(args.accountId, { reviewBannedUntil: until });
   }
 }
 
@@ -76,5 +82,13 @@ export const setDiscountBan = mutation({
   args: { token: v.string(), accountId: v.id("accounts"), days: v.number() },
   handler: async (ctx, args) => {
     await setBan(ctx, args, "discountBannedUntil");
+  },
+});
+
+/** ممنوع کردن (یا اجازه دادن) ثبت نظر برای یک کاربر */
+export const setReviewBan = mutation({
+  args: { token: v.string(), accountId: v.id("accounts"), days: v.number() },
+  handler: async (ctx, args) => {
+    await setBan(ctx, args, "reviewBannedUntil");
   },
 });

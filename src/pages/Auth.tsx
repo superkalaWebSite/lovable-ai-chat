@@ -92,17 +92,13 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
     }
   };
 
-  /** مرحله ۲ ورود: رمز عبور دو بار (برای امنیت) */
+  /** مرحله ۲ ورود: رمز عبور فقط یک بار وارد می‌شود */
   const handlePasswordStep = async (
     event: React.FormEvent<HTMLFormElement>,
   ) => {
     event.preventDefault();
     if (password.length < 4) {
       setError("رمز عبور باید حداقل ۴ کاراکتر باشد.");
-      return;
-    }
-    if (password !== confirm) {
-      setError("رمزهای وارد شده یکسان نیستند. دوباره وارد کنید.");
       return;
     }
     setBusy(true);
@@ -114,7 +110,6 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
     } catch (err) {
       setError(friendlyError(err));
       setPassword("");
-      setConfirm("");
     } finally {
       setBusy(false);
     }
@@ -296,7 +291,7 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">رمز عبور (مرحله ۱)</Label>
+                    <Label htmlFor="login-password">رمز عبور</Label>
                     <PasswordInput
                       id="login-password"
                       value={password}
@@ -307,23 +302,9 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                       autoFocus
                       icon={Lock}
                     />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="login-confirm">
-                      رمز عبور (مرحله ۲ — تکرار)
-                    </Label>
-                    <PasswordInput
-                      id="login-confirm"
-                      value={confirm}
-                      onChange={setConfirm}
-                      placeholder="دوباره همان رمز"
-                      autoComplete="current-password"
-                      disabled={busy}
-                      icon={KeyRound}
-                    />
                     <p className="text-xs text-muted-foreground">
-                      🔒 برای امنیت بیشتر، رمز دو بار وارد می‌شود.
+                      🔒 هنگام ورود رمز فقط یک بار وارد می‌شود؛ تکرار رمز فقط
+                      هنگام ساخت حساب است.
                     </p>
                   </div>
 

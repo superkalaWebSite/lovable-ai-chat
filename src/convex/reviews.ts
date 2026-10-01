@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAccount } from "./helpers";
+import { requireAccount, requireAdmin } from "./helpers";
+
+/** مقام‌هایی که می‌توانند نظر کاربران را لایک کنند (پشتیبانی و مدیران) */
+const CAN_LIKE = ["admin", "partner", "supervisor"];
 
 const SEED_REVIEWS = [
   {
@@ -37,6 +40,9 @@ export const add = mutation({
   args: { token: v.string(), rating: v.number(), text: v.string() },
   handler: async (ctx, { token, rating, text }) => {
     const account = await requireAccount(ctx, token);
+    if ((account.reviewBannedUntil ?? 0) > Date.now()) {
+      throw new Error("ثبت نظر برای حساب شما موقتاً غیرفعال است.");
+    }
     const clean = text.trim();
     if (clean.length < 5) throw new Error("متن نظر را کامل بنویسید.");
     if (clean.length > 600) throw new Error("متن نظر حداکثر ۶۰۰ کاراکتر است.");
@@ -50,6 +56,59 @@ export const add = mutation({
       text: clean,
       createdAt: Date.now(),
     });
+  },
+});
+
+/** لایک یا برداشتن لایک یک نظر — فقط پشتیبانی و مدیران (کاربر حس دیده شدن می‌کند) */
+export const toggleLike = mutation({
+  args: { token: v.string(), reviewId: v.id("reviews") },
+  handler: async (ctx, { token, reviewId }) => {
+    const account = await requireAccount(ctx, token);
+    if (!CAN_LIKE.includes(account.role)) {
+      throw new Error("فقط پشتیبانی و مدیران می‌توانند نظر را لایک کنند.");
+    }
+    const review = await ctx.db.get(reviewId);
+    if (!review) throw new Error("نظر یافت نشد.");
+    const liked = review.likedBy ?? [];
+    const next = liked.includes(account._id)
+      ? liked.filter((id) => id !== account._id)
+      : [...liked, account._id];
+    await ctx.db.patch(reviewId, { likedBy: next });
+    return next.length;
+  },
+});
+
+/** ویرایش متن و امتیاز یک نظر (فقط مدیر) */
+export const update = mutation({
+  args: {
+    token: v.string(),
+    reviewId: v.id("reviews"),
+    text: v.string(),
+    rating: v.number(),
+  },
+  handler: async (ctx, { token, reviewId, text, rating }) => {
+    await requireAdmin(ctx, token);
+    const review = await ctx.db.get(reviewId);
+    if (!review) throw new Error("نظر یافت نشد.");
+    const clean = text.trim();
+    if (clean.length < 5 || clean.length > 600) {
+      throw new Error("متن نظر باید بین ۵ تا ۶۰۰ کاراکتر باشد.");
+    }
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      throw new Error("امتیاز باید بین ۱ تا ۵ باشد.");
+    }
+    await ctx.db.patch(reviewId, { text: clean, rating: Math.round(rating) });
+  },
+});
+
+/** حذف یک نظر (فقط مدیر) */
+export const remove = mutation({
+  args: { token: v.string(), reviewId: v.id("reviews") },
+  handler: async (ctx, { token, reviewId }) => {
+    await requireAdmin(ctx, token);
+    const review = await ctx.db.get(reviewId);
+    if (!review) throw new Error("نظر یافت نشد.");
+    await ctx.db.delete(reviewId);
   },
 });
 

@@ -49,6 +49,8 @@ const schema = defineSchema(
       // مجازات‌های مدیر (تا چه زمانی فعال است؛ 0 یا نداشتن = بدون مجازات)
       supportBannedUntil: v.optional(v.number()),
       discountBannedUntil: v.optional(v.number()),
+      /** ممنوعیت ثبت نظر تا این تاریخ */
+      reviewBannedUntil: v.optional(v.number()),
     }).index("by_usernameLower", ["usernameLower"]),
 
     sessions: defineTable({
@@ -108,6 +110,8 @@ const schema = defineSchema(
       rating: v.number(),
       text: v.string(),
       createdAt: v.number(),
+      /** پشتیبانی و مدیران می‌توانند نظر را لایک کنند تا کاربر حس دیده شدن کند */
+      likedBy: v.optional(v.array(v.id("accounts"))),
     }).index("by_createdAt", ["createdAt"])
   },
   {

@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,15 +15,23 @@ import { friendlyError } from "@/lib/crypto";
 import { getToken } from "@/lib/session";
 import { formatDate } from "@/lib/shop";
 import { useMutation, useQuery } from "convex/react";
-import { Loader2, MessageSquare, PenLine, Star, UserRound } from "lucide-react";
+import {
+  Heart,
+  Loader2,
+  MessageSquare,
+  PenLine,
+  Star,
+  UserRound,
+} from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 
 export default function ReviewsPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, canLike, user } = useAuth();
   const reviews = useQuery(api.reviews.list);
   const addMutation = useMutation(api.reviews.add);
+  const likeMutation = useMutation(api.reviews.toggleLike);
 
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
@@ -46,6 +55,27 @@ export default function ReviewsPage() {
       setBusy(false);
     }
   };
+
+  /** لایک/برداشتن لایک نظر — فقط پشتیبانی و مدیران */
+  const toggleLike = async (reviewId: Id<"reviews">) => {
+    try {
+      await likeMutation({ token: getToken(), reviewId });
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  const likeCount = (review: { likedBy?: Id<"accounts">[] }) =>
+    (review.likedBy ?? []).length;
+  const isLiked = (review: { likedBy?: Id<"accounts">[] }) =>
+    !!user && (review.likedBy ?? []).includes(user._id);
+
+  /** آیا مدیر ثبت نظر این کاربر را غیرفعال کرده است؟ */
+  const bannedUntil = user?.reviewBannedUntil ?? 0;
+  const reviewBanned = bannedUntil > Date.now();
+  const bannedDaysLeft = reviewBanned
+    ? Math.ceil((bannedUntil - Date.now()) / 86400000)
+    : 0;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8">
@@ -72,7 +102,27 @@ export default function ReviewsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isAuthenticated ? (
+            {isAuthenticated && reviewBanned ? (
+              <div className="text-center">
+                <span className="text-4xl">🚫</span>
+                <h3 className="mt-3 font-black">ثبت نظر برای شما غیرفعال است</h3>
+                <p className="mt-2 text-sm leading-7 text-muted-foreground">
+                  مدیر سایت ثبت نظر حساب شما را{" "}
+                  {bannedDaysLeft > 3000
+                    ? "به‌صورت همیشگی"
+                    : `تا ${Math.max(1, bannedDaysLeft).toLocaleString("fa-IR")} روز دیگر`}{" "}
+                  غیرفعال کرده است. اگر فکر می‌کنید اشتباه شده، از گپ پشتیبانی
+                  پیام بدهید.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4 w-full rounded-xl"
+                  asChild
+                >
+                  <Link to="/support">پیام به پشتیبانی</Link>
+                </Button>
+              </div>
+            ) : isAuthenticated ? (
               <form onSubmit={submit} className="space-y-4">
                 <div className="space-y-2">
                   <Label>امتیاز شما</Label>
@@ -198,6 +248,31 @@ export default function ReviewsPage() {
                   <p className="mt-3 text-sm leading-7 text-muted-foreground">
                     «{review.text}»
                   </p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                        likeCount(review) > 0
+                          ? "bg-primary/10 text-primary"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      ❤️ {likeCount(review).toLocaleString("fa-IR")}
+                      {likeCount(review) > 0 && " — پشتیبانی دیده ✓"}
+                    </span>
+                    {canLike && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isLiked(review) ? "default" : "outline"}
+                        className="h-8 gap-1 rounded-full px-3 text-xs"
+                        title="لایک نظر تا کاربر حس دیده شدن کند"
+                        onClick={() => void toggleLike(review._id)}
+                      >
+                        <Heart className="size-3.5" />
+                        {isLiked(review) ? "لایک شد" : "لایک کن"}
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))

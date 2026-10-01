@@ -1,294 +1,443 @@
+import { api } from "@/convex/_generated/api";
+import logo from "@/assets/logo.svg";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
-
+import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
-import logo from "@/assets/logo.svg";
-import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
+import { friendlyError } from "@/lib/crypto";
+import { useConvex } from "convex/react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  KeyRound,
+  Loader2,
+  Lock,
+  Pencil,
+  ShieldCheck,
+  ShoppingCart,
+  UserRound,
+} from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { toast } from "sonner";
 
 interface AuthProps {
   redirectAfterAuth?: string;
 }
 
-function resolveRedirectAfterAuth(
-  returnTo: string | null,
-  fallback = "/dashboard",
-) {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
-    return returnTo;
-  }
+function resolveRedirect(returnTo: string | null, fallback: string) {
+  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) return returnTo;
   return fallback;
 }
 
-function Auth({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
+  const { isLoading: authLoading, isAuthenticated, signIn, signUp } =
+    useAuth();
+  const convex = useConvex();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = resolveRedirectAfterAuth(
+  const redirect = resolveRedirect(
     searchParams.get("returnTo"),
     redirectAfterAuth,
   );
-  const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
-  const [otp, setOtp] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [mode, setMode] = useState<"login" | "register">("login");
+  const [step, setStep] = useState<"username" | "password">("username");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
-      navigate(redirect);
+      navigate(redirect, { replace: true });
     }
   }, [authLoading, isAuthenticated, navigate, redirect]);
-  const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+
+  const switchMode = (next: "login" | "register") => {
+    setMode(next);
+    setStep("username");
+    setPassword("");
+    setConfirm("");
+    setError(null);
+  };
+
+  /** مرحله ۱ ورود: پیدا کردن نام کاربری */
+  const handleUsernameStep = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
-    setIsLoading(true);
+    const clean = username.trim();
+    if (clean.length < 3) {
+      setError("نام کاربری باید حداقل ۳ حرف باشد.");
+      return;
+    }
+    setBusy(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
-      setStep({ email: formData.get("email") as string });
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Email sign-in error:", error);
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Failed to send verification code. Please try again.",
-      );
-      setIsLoading(false);
+      const account = await convex.query(api.accounts.getSalt, {
+        username: clean,
+      });
+      if (!account) throw new Error("چنین نام کاربری وجود ندارد.");
+      setStep("password");
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleOtpSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  /** مرحله ۲ ورود: رمز عبور دو بار (برای امنیت) */
+  const handlePasswordStep = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
-    setIsLoading(true);
+    if (password.length < 4) {
+      setError("رمز عبور باید حداقل ۴ کاراکتر باشد.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("رمزهای وارد شده یکسان نیستند. دوباره وارد کنید.");
+      return;
+    }
+    setBusy(true);
     setError(null);
     try {
-      const formData = new FormData(event.currentTarget);
-      await signIn("email-otp", formData);
-
-      console.log("signed in");
-
-      navigate(redirect);
-    } catch (error) {
-      console.error("OTP verification error:", error);
-
-      setError("The verification code you entered is incorrect.");
-      setIsLoading(false);
-
-      setOtp("");
+      await signIn(username.trim(), password);
+      toast.success("خوش آمدی! وارد شدی ✌️");
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      setError(friendlyError(err));
+      setPassword("");
+      setConfirm("");
+    } finally {
+      setBusy(false);
     }
   };
 
-  const handleGuestLogin = async () => {
-    setIsLoading(true);
+  const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const clean = username.trim();
+    if (clean.length < 3) {
+      setError("نام کاربری باید حداقل ۳ حرف باشد.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("رمز عبور باید حداقل ۶ کاراکتر باشد.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("رمزهای وارد شده یکسان نیستند. دوباره وارد کنید.");
+      return;
+    }
+    setBusy(true);
     setError(null);
     try {
-      console.log("Attempting anonymous sign in...");
-      await signIn("anonymous");
-      console.log("Anonymous sign in successful");
-      navigate(redirect);
-    } catch (error) {
-      console.error("Guest login error:", error);
-      console.error("Error details:", JSON.stringify(error, null, 2));
-      setError(`Failed to sign in as guest: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setIsLoading(false);
+      await signUp(clean, password);
+      toast.success("حساب ساخته شد — خوش اومدی! 🎉");
+      navigate(redirect, { replace: true });
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-10">
+      <div className="grid w-full max-w-5xl items-center gap-8 lg:grid-cols-2">
+        {/* فرم */}
+        <Card className="mx-auto w-full max-w-md rounded-3xl border-border/70 shadow-xl">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex size-14 items-center justify-center rounded-2xl bg-primary/10">
+              <img
+                src={logo}
+                alt="سوپر کالا"
+                width={40}
+                height={40}
+                className="cursor-pointer"
+                onClick={() => navigate("/")}
+              />
+            </div>
+            <CardTitle className="text-2xl">
+              {mode === "login" ? "ورود به حساب" : "ساخت حساب جدید"}
+            </CardTitle>
+            <CardDescription>
+              بدون ایمیل — فقط نام کاربری و رمز عبور
+            </CardDescription>
+          </CardHeader>
 
-      
-      {/* Auth Content */}
-      <div className="flex-1 flex items-center justify-center">
-        <div className="flex items-center justify-center h-full flex-col">
-        <Card className="min-w-[350px] pb-0 border shadow-md">
-          {step === "signIn" ? (
-            <>
-              <CardHeader className="text-center">
-              <div className="flex justify-center">
-                    <img
-                      src={logo}
-                      alt="Lock Icon"
-                      width={64}
-                      height={64}
-                      className="rounded-lg mb-4 mt-4 cursor-pointer"
-                      onClick={() => navigate("/")}
-                    />
-                  </div>
-                <CardTitle className="text-xl">Get Started</CardTitle>
-                <CardDescription>
-                  Enter your email to log in or sign up
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleEmailSubmit}>
-                <CardContent>
-                  
-                  <div className="relative flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <CardContent>
+            {/* سوییچ ورود / ثبت‌نام */}
+            <div className="mb-6 grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => switchMode("login")}
+                className={`rounded-full py-2 text-sm font-bold transition-colors ${
+                  mode === "login"
+                    ? "bg-card text-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                ورود
+              </button>
+              <button
+                type="button"
+                onClick={() => switchMode("register")}
+                className={`rounded-full py-2 text-sm font-bold transition-colors ${
+                  mode === "register"
+                    ? "bg-card text-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                ثبت‌نام
+              </button>
+            </div>
+
+            {mode === "login" ? (
+              step === "username" ? (
+                <form onSubmit={handleUsernameStep} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="login-username">نام کاربری</Label>
+                    <div className="relative">
+                      <UserRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        name="email"
-                        placeholder="name@example.com"
-                        type="email"
-                        className="pl-9"
-                        disabled={isLoading}
-                        required
+                        id="login-username"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        placeholder="مثال: کیان دریاباری"
+                        className="h-11 rounded-xl ps-9"
+                        autoComplete="username"
+                        disabled={busy}
+                        autoFocus
                       />
                     </div>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="icon"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <ArrowRight className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-500">{error}</p>
-                  )}
-                  
-                  <div className="mt-4">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-background px-2 text-muted-foreground">
-                          Or
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full mt-4"
-                      onClick={handleGuestLogin}
-                      disabled={isLoading}
-                    >
-                      <UserX className="mr-2 h-4 w-4" />
-                      Continue as Guest
-                    </Button>
-                  </div>
-                </CardContent>
-              </form>
-            </>
-          ) : (
-            <>
-              <CardHeader className="text-center mt-4">
-                <CardTitle>Check your email</CardTitle>
-                <CardDescription>
-                  We've sent a code to {step.email}
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleOtpSubmit}>
-                <CardContent className="pb-4">
-                  <input type="hidden" name="email" value={step.email} />
-                  <input type="hidden" name="code" value={otp} />
-
-                  <div className="flex justify-center">
-                    <InputOTP
-                      value={otp}
-                      onChange={setOtp}
-                      maxLength={6}
-                      disabled={isLoading}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && otp.length === 6 && !isLoading) {
-                          // Find the closest form and submit it
-                          const form = (e.target as HTMLElement).closest("form");
-                          if (form) {
-                            form.requestSubmit();
-                          }
-                        }
-                      }}
-                    >
-                      <InputOTPGroup>
-                        {Array.from({ length: 6 }).map((_, index) => (
-                          <InputOTPSlot key={index} index={index} />
-                        ))}
-                      </InputOTPGroup>
-                    </InputOTP>
-                  </div>
-                  {error && (
-                    <p className="mt-2 text-sm text-red-500 text-center">
-                      {error}
-                    </p>
-                  )}
-                  <p className="text-sm text-muted-foreground text-center mt-4">
-                    Didn't receive a code?{" "}
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto"
-                      onClick={() => setStep("signIn")}
-                    >
-                      Try again
-                    </Button>
-                  </p>
-                </CardContent>
-                <CardFooter className="flex-col gap-2">
                   <Button
                     type="submit"
-                    className="w-full"
-                    disabled={isLoading || otp.length !== 6}
+                    className="h-11 w-full gap-2 rounded-xl"
+                    disabled={busy}
                   >
-                    {isLoading ? (
+                    {busy ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ArrowLeft className="size-4" />
+                    )}
+                    ادامه
+                  </Button>
+                </form>
+              ) : (
+                <form onSubmit={handlePasswordStep} className="space-y-4">
+                  <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2 text-sm">
+                    <span className="truncate font-medium">{username}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 text-primary"
+                      onClick={() => setStep("username")}
+                    >
+                      <Pencil className="size-3.5" /> تغییر
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="login-password">رمز عبور (مرحله ۱)</Label>
+                    <div className="relative">
+                      <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="login-password"
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="رمز عبور"
+                        className="h-11 rounded-xl ps-9"
+                        autoComplete="current-password"
+                        disabled={busy}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="login-confirm">
+                      رمز عبور (مرحله ۲ — تکرار)
+                    </Label>
+                    <div className="relative">
+                      <KeyRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="login-confirm"
+                        type="password"
+                        value={confirm}
+                        onChange={(event) => setConfirm(event.target.value)}
+                        placeholder="دوباره همان رمز"
+                        className="h-11 rounded-xl ps-9"
+                        autoComplete="current-password"
+                        disabled={busy}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      🔒 برای امنیت بیشتر، رمز دو بار وارد می‌شود.
+                    </p>
+                  </div>
+
+                  <Button
+                    type="submit"
+                    className="h-11 w-full gap-2 rounded-xl"
+                    disabled={busy}
+                  >
+                    {busy ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Verifying...
+                        <Loader2 className="size-4 animate-spin" /> در حال
+                        ورود...
                       </>
                     ) : (
                       <>
-                        Verify code
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        ورود به حساب <ArrowLeft className="size-4" />
                       </>
                     )}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setStep("signIn")}
-                    disabled={isLoading}
-                    className="w-full"
-                  >
-                    Use different email
-                  </Button>
-                </CardFooter>
-              </form>
-            </>
-          )}
+                </form>
+              )
+            ) : (
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reg-username">نام کاربری</Label>
+                  <div className="relative">
+                    <UserRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="reg-username"
+                      value={username}
+                      onChange={(event) => setUsername(event.target.value)}
+                      placeholder="یک نام کاربری انتخاب کنید"
+                      className="h-11 rounded-xl ps-9"
+                      autoComplete="username"
+                      disabled={busy}
+                    />
+                  </div>
+                </div>
 
-          <div className="py-4 px-6 text-xs text-center text-muted-foreground bg-muted border-t rounded-b-lg">
-            Secured by{" "}
-            <a
-              href="https://freebuff.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-primary transition-colors"
-            >
-              freebuff.com
-            </a>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reg-password">رمز عبور (مرحله ۱)</Label>
+                  <div className="relative">
+                    <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="reg-password"
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="حداقل ۶ کاراکتر"
+                      className="h-11 rounded-xl ps-9"
+                      autoComplete="new-password"
+                      disabled={busy}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="reg-confirm">رمز عبور (مرحله ۲ — تکرار)</Label>
+                  <div className="relative">
+                    <KeyRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      id="reg-confirm"
+                      type="password"
+                      value={confirm}
+                      onChange={(event) => setConfirm(event.target.value)}
+                      placeholder="دوباره همان رمز"
+                      className="h-11 rounded-xl ps-9"
+                      autoComplete="new-password"
+                      disabled={busy}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    🔒 رمز را دو بار وارد کنید تا مطمئن شوید درست است.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="h-11 w-full gap-2 rounded-xl"
+                  disabled={busy}
+                >
+                  {busy ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" /> در حال ساخت
+                      حساب...
+                    </>
+                  ) : (
+                    <>
+                      ساخت حساب <ArrowLeft className="size-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
+
+            {error && (
+              <p className="mt-4 rounded-xl bg-destructive/10 px-3 py-2 text-center text-sm font-medium text-destructive">
+                {error}
+              </p>
+            )}
+
+            <p className="mt-5 text-center text-xs text-muted-foreground">
+              با ورود، قوانین سوپر کالا را می‌پذیرید.
+            </p>
+          </CardContent>
         </Card>
+
+        {/* پنل تصویری */}
+        <div className="relative hidden min-h-[500px] overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-rose-600 to-orange-500 p-10 text-white lg:flex lg:flex-col lg:justify-center">
+          <div className="absolute -start-16 -top-16 size-64 rounded-full bg-white/10" />
+          <div className="absolute -bottom-20 -end-10 size-72 rounded-full bg-black/10" />
+
+          <div className="relative">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold backdrop-blur">
+              <ShieldCheck className="size-3.5" /> امنیت دو مرحله‌ای رمز
+            </span>
+            <h2 className="mt-5 text-3xl font-black leading-10">
+              به سوپر کالا خوش اومدی 👋
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-7 text-white/85">
+              حساب بساز، سبد خریدت رو پر کن، سفارش بده و هر سوالی داشتی مستقیم
+              با پشتیبانی چت کن.
+            </p>
+
+            <ul className="mt-7 space-y-4 text-sm">
+              <li className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-white/15">
+                  <KeyRound className="size-4" />
+                </span>
+                رمز عبور دو بار وارد می‌شود؛ بدون هیچ ایمیلی
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-white/15">
+                  <ShoppingCart className="size-4" />
+                </span>
+                سبد خرید و سفارش‌هات همیشه در پروفایلت ذخیره می‌شه
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="flex size-9 items-center justify-center rounded-xl bg-white/15">
+                  <ArrowRight className="size-4" />
+                </span>
+                بعد از ورود، دقیقاً به همان صفحه‌ای که بودی برمی‌گردی
+              </li>
+            </ul>
+
+            <div className="mt-8 flex gap-3 text-4xl">
+              <span className="rounded-2xl bg-white/15 p-3 backdrop-blur">📱</span>
+              <span className="rounded-2xl bg-white/15 p-3 backdrop-blur">💻</span>
+              <span className="rounded-2xl bg-white/15 p-3 backdrop-blur">🎧</span>
+              <span className="rounded-2xl bg-white/15 p-3 backdrop-blur">🏠</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

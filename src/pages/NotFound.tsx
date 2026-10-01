@@ -1,4 +1,6 @@
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router";
 
 export default function NotFound() {
   return (
@@ -6,20 +8,21 @@ export default function NotFound() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen flex flex-col"
+      className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center"
     >
-
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <div className="max-w-5xl mx-auto relative px-4">
-          <div className="flex items-center justify-center min-h-[200px]">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
-              <p className="text-lg text-gray-600">Page Not Found</p>
-            </div>
-          </div>
-        </div>
+      <span className="text-7xl">🧺</span>
+      <h1 className="mt-6 text-5xl font-black text-primary">۴۰۴</h1>
+      <p className="mt-3 text-lg font-bold">صفحه پیدا نشد!</p>
+      <p className="mt-1 max-w-sm text-sm leading-7 text-muted-foreground">
+        ممکن است آدرس را اشتباه تایپ کرده باشی یا این صفحه جابه‌جا شده باشد.
+      </p>
+      <div className="mt-6 flex gap-2">
+        <Button asChild>
+          <Link to="/">بازگشت به صفحه اصلی</Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link to="/shop">رفتن به فروشگاه</Link>
+        </Button>
       </div>
     </motion.div>
   );

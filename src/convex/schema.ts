@@ -32,12 +32,65 @@ const schema = defineSchema(
       role: v.optional(roleValidator), // role of the user. do not remove
     }).index("email", ["email"]), // index for the email. do not remove or modify
 
-    // add other tables here
+    // ---------- سوپر کالا: accounts (login without email, name + password) ----------
+    accounts: defineTable({
+      username: v.string(),
+      usernameLower: v.string(),
+      salt: v.string(),
+      passwordHash: v.string(),
+      role: v.union(v.literal("admin"), v.literal("user")),
+      createdAt: v.number(),
+    }).index("by_usernameLower", ["usernameLower"]),
 
-    // tableName: defineTable({
-    //   ...
-    //   // table fields
-    // }).index("by_field", ["field"])
+    sessions: defineTable({
+      token: v.string(),
+      accountId: v.id("accounts"),
+      createdAt: v.number(),
+    })
+      .index("by_token", ["token"])
+      .index("by_account", ["accountId"]),
+
+    products: defineTable({
+      title: v.string(),
+      brand: v.string(),
+      category: v.string(),
+      emoji: v.string(),
+      price: v.number(),
+      oldPrice: v.optional(v.number()),
+      rating: v.number(),
+      stock: v.number(),
+      description: v.string(),
+      badge: v.optional(v.string()),
+    }).index("by_category", ["category"]),
+
+    cartItems: defineTable({
+      accountId: v.id("accounts"),
+      productId: v.id("products"),
+      qty: v.number(),
+    }).index("by_account", ["accountId"]),
+
+    orders: defineTable({
+      accountId: v.id("accounts"),
+      items: v.array(
+        v.object({
+          productId: v.id("products"),
+          title: v.string(),
+          emoji: v.string(),
+          price: v.number(),
+          qty: v.number(),
+        }),
+      ),
+      total: v.number(),
+      status: v.string(),
+      createdAt: v.number(),
+    }).index("by_account", ["accountId"]),
+
+    supportMessages: defineTable({
+      accountId: v.id("accounts"),
+      text: v.string(),
+      from: v.union(v.literal("user"), v.literal("admin")),
+      createdAt: v.number(),
+    }).index("by_account", ["accountId"])
   },
   {
     schemaValidation: false,

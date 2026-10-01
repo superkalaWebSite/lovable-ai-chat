@@ -1,25 +1,31 @@
 import '@vly-ai/integrations';
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
+import { SiteHeader } from "@/components/SiteHeader";
+import { SiteFooter } from "@/components/SiteFooter";
+import { BootstrapSeeds } from "@/components/BootstrapSeeds";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
 // Lazy load route components for better code splitting
 const Landing = lazy(() => import("./pages/Landing.tsx"));
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Shop = lazy(() => import("./pages/Shop.tsx"));
+const CartPage = lazy(() => import("./pages/Cart.tsx"));
+const Profile = lazy(() => import("./pages/Profile.tsx"));
+const Support = lazy(() => import("./pages/Support.tsx"));
+const Admin = lazy(() => import("./pages/Admin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
 function RouteLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-pulse text-muted-foreground">Loading...</div>
+    <div className="min-h-screen flex items-center justify-center">        <div className="animate-pulse text-muted-foreground">در حال بارگذاری...</div>
     </div>
   );
 }
@@ -117,23 +123,52 @@ createRoot(document.getElementById("root")!).render(
       <ConvexAuthProvider client={convex}>
         <BrowserRouter>
           <RouteSyncer />
+          <BootstrapSeeds />
           <Suspense fallback={<RouteLoading />}>
+            <SiteHeader />
             <Routes>
               <Route path="/" element={<Landing />} />
+              <Route path="/shop" element={<Shop />} />
               <Route
                 path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
+                element={<AuthPage redirectAfterAuth="/profile" />}
               />
               <Route
-                path="/dashboard"
+                path="/cart"
                 element={
                   <RequireAuth>
-                    <Dashboard />
+                    <CartPage />
                   </RequireAuth>
                 }
               />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <Profile />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/support"
+                element={
+                  <RequireAuth>
+                    <Support />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <RequireAuth>
+                    <Admin />
+                  </RequireAuth>
+                }
+              />
+              <Route path="/dashboard" element={<Navigate to="/profile" replace />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <SiteFooter />
           </Suspense>
         </BrowserRouter>
         <Toaster />

@@ -1,5 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
+import heroBg from "@/assets/hero-bg.svg";
 import { ProductCard } from "@/components/ProductCard";
 import { ProductDialog } from "@/components/ProductDialog";
 import { Badge } from "@/components/ui/badge";
@@ -83,25 +84,35 @@ export default function Landing() {
   return (
     <div className="overflow-x-clip">
       {/* ───────────── هیرو ───────────── */}
-      <section className="relative">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/8 via-transparent to-transparent" />
-        <div className="pointer-events-none absolute -top-24 start-[-6rem] size-72 rounded-full bg-primary/10 blur-3xl" />
-        <div className="pointer-events-none absolute top-40 end-[-4rem] size-80 rounded-full bg-amber-300/20 blur-3xl" />
+      <section className="relative overflow-hidden">
+        {/* پس‌زمینه تصویری محصولات الکترونیکی با تم سبز تیره و روشن */}
+        <img
+          src={heroBg}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full select-none object-cover"
+        />
+        {/* لایه تیره سبز برای خوانا ماندن متن‌ها روی تصویر */}
+        <div className="pointer-events-none absolute inset-0 bg-[#04220f]/40" />
+        <div className="pointer-events-none absolute -top-24 start-[-6rem] size-72 rounded-full bg-green-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute top-40 end-[-4rem] size-80 rounded-full bg-green-300/10 blur-3xl" />
+        {/* محو تدریجی تصویر به رنگ سایت تا پایین‌تر کاملاً با پس‌زمینه سایت قاطی شود */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 bg-gradient-to-b from-transparent via-transparent via-40% to-background lg:h-72" />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 py-12 lg:grid-cols-2 lg:py-20">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pt-12 pb-32 lg:grid-cols-2 lg:pt-20 lg:pb-40">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Badge className="rounded-full bg-foreground px-3 py-1 text-white">
+            <Badge className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-white">
               🔥 جشنواره تخفیف پاییزه — تا ۴۰٪ تخفیف
             </Badge>
 
-            <h1 className="mt-5 text-4xl font-black leading-[1.35] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-5 text-4xl font-black leading-[1.35] tracking-tight text-white [text-shadow:0_2px_18px_rgba(4,34,15,0.75)] sm:text-5xl lg:text-6xl">
               هر چیزی که نیاز داری،
               <br />
-              <span className="text-primary">با قیمت منصفانه</span> و ارسال
+              <span className="text-green-400">با قیمت منصفانه</span> و ارسال
               سریع
             </h1>
 
-            <p className="mt-4 max-w-lg text-base leading-8 text-muted-foreground">
+            <p className="mt-4 max-w-lg text-base leading-8 text-white/75 [text-shadow:0_1px_12px_rgba(4,34,15,0.75)]">
               سوپر کالا فروشگاه اینترنتی مطمئنه؛ از موبایل و لپتاپ تا لوازم
               خانه و پوشاک — با ضمانت اصالت کالا، ضمانت بازگشت ۷ روزه و
               پشتیبانی آنلاین.
@@ -125,7 +136,11 @@ export default function Landing() {
             </form>
 
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Button size="lg" className="h-12 gap-2 rounded-2xl px-7" asChild>
+              <Button
+                size="lg"
+                className="h-12 gap-2 rounded-2xl bg-green-400 px-7 text-green-950 shadow-lg shadow-black/20 hover:bg-green-300"
+                asChild
+              >
                 <Link to="/shop">
                   مشاهده محصولات <ArrowLeft className="size-4" />
                 </Link>
@@ -134,7 +149,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   variant="outline"
-                  className="h-12 rounded-2xl px-7"
+                  className="h-12 rounded-2xl border-white/30 bg-white/10 px-7 text-white hover:bg-white/20 hover:text-white"
                   asChild
                 >
                   <Link to="/auth">ثبت‌نام</Link>
@@ -142,12 +157,12 @@ export default function Landing() {
               )}
             </div>
 
-            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
+            <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-white/70">
               <span className="flex items-center gap-1.5">
-                <Truck className="size-4 text-primary" /> ارسال رایگان بالای ۵۰۰ هزار تومان
+                <Truck className="size-4 text-green-300" /> ارسال رایگان بالای ۵۰۰ هزار تومان
               </span>
               <span className="flex items-center gap-1.5">
-                <BadgeCheck className="size-4 text-primary" /> ۷ روز ضمانت بازگشت
+                <BadgeCheck className="size-4 text-green-300" /> ۷ روز ضمانت بازگشت
               </span>
               <span className="flex items-center gap-1.5">
                 <Star className="size-4 fill-amber-400 text-amber-400" /> امتیاز ۴.۸ از مشتری‌ها

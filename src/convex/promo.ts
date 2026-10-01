@@ -24,8 +24,12 @@ export const get = query({
       .withIndex("by_updatedAt")
       .order("desc")
       .first();
-    if (!saved || !saved.active) {
-      return { ...PROMO_DEFAULTS, saved: !!saved, active: false };
+    // چیزی ذخیره نشده ⇒ بنر با متن‌های پیش‌فرض نمایش داده می‌شود
+    if (!saved) {
+      return { ...PROMO_DEFAULTS, saved: false };
+    }
+    if (!saved.active) {
+      return { ...PROMO_DEFAULTS, saved: true, active: false };
     }
     return {
       badge: saved.badge,

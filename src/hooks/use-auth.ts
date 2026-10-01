@@ -1,7 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { friendlyError, randomSalt, sha256Hex } from "@/lib/crypto";
 import { roleInfo } from "@/lib/roles";
-import { ADMIN_USERNAME } from "@/lib/site";
 import { getToken, setToken, subscribeSession } from "@/lib/session";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -10,6 +9,9 @@ import { useCallback, useSyncExternalStore } from "react";
  * ورود/ثبت‌نام بدون ایمیل — فقط نام کاربری و رمز عبور.
  * رمز دو بار در فرم وارد می‌شود و به صورت هش (SHA-256 + salt) ارسال می‌گردد.
  */
+
+/** نام کاربری رزروشده مدیر اصلی سایت (هم‌نام با مقدار بک‌اند) */
+const ADMIN_USERNAME = "کیان دریاباری";
 export function useAuth() {
   const token = useSyncExternalStore(
     subscribeSession,
@@ -90,7 +92,8 @@ export function useAuth() {
   // هر کسی که به پنل کنترل سایت راه دارد (پشتیبانی، ادمین، شریک مدیر)
   const canUsePanel = isAdmin || isSupervisor;
   // مدیر اصلی سایت: شریک مدیر یا حساب رزروشده مدیر
-  const isOwner = !!user && (role === "partner" || user.username === ADMIN_USERNAME);
+  const isOwner =
+    !!user && (role === "partner" || user.username === ADMIN_USERNAME);
 
   return {
     user,

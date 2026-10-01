@@ -3,7 +3,7 @@ import { mutation, query } from "./_generated/server";
 import {
   accountFromToken,
   requireAccount,
-  requireAdmin,
+  requireStaff,
 } from "./helpers";
 
 function cleanText(text: string): string {
@@ -48,11 +48,11 @@ export const myThread = query({
   },
 });
 
-/** همه گفتگوها برای پنل مدیریت */
+/** همه گفتگوها برای پشتیبانی و مدیران */
 export const adminInbox = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await requireAdmin(ctx, token);
+    await requireStaff(ctx, token);
     const messages = await ctx.db.query("supportMessages").collect();
     const accounts = await ctx.db.query("accounts").collect();
     const names = new Map(accounts.map((a) => [a._id, a.username]));
@@ -69,11 +69,11 @@ export const adminInbox = query({
   },
 });
 
-/** پاسخ مدیر به کاربر */
+/** پاسخ پشتیبانی یا مدیر به کاربر */
 export const adminReply = mutation({
   args: { token: v.string(), accountId: v.id("accounts"), text: v.string() },
   handler: async (ctx, { token, accountId, text }) => {
-    await requireAdmin(ctx, token);
+    await requireStaff(ctx, token);
     const target = await ctx.db.get(accountId);
     if (!target) throw new Error("کاربر یافت نشد.");
     await ctx.db.insert("supportMessages", {

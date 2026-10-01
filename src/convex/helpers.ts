@@ -29,11 +29,29 @@ export async function requireAccount(
   return account;
 }
 
-/** مقام‌هایی که به پنل کنترل سایت دسترسی کامل دارند */
+/** مقام‌هایی که به پنل کنترل سایت دسترسی مدیریتی دارند */
 export const ADMIN_ROLES = ["admin", "partner"] as const;
+
+/** مقام‌هایی که به گفتگوی پشتیبانی کاربران دسترسی دارند */
+export const STAFF_ROLES = ["supervisor", "admin", "partner"] as const;
 
 export function isAdminRole(role: string): boolean {
   return (ADMIN_ROLES as readonly string[]).includes(role);
+}
+
+export function isStaffRole(role: string): boolean {
+  return (STAFF_ROLES as readonly string[]).includes(role);
+}
+
+/**
+ * مدیر اصلی سایت: حساب «شریک مدیر» و حساب رزروشده ADMIN_USERNAME.
+ * فقط این حساب‌ها اجازه تغییر مقام‌ها و دیدن آمار/سفارش‌ها/نظرها را دارند.
+ */
+export function isOwnerAccount(account: Doc<"accounts">): boolean {
+  return (
+    account.role === "partner" ||
+    account.usernameLower === normalizeUsername(ADMIN_USERNAME)
+  );
 }
 
 export async function requireAdmin(
@@ -43,6 +61,30 @@ export async function requireAdmin(
   const account = await requireAccount(ctx, token);
   if (!isAdminRole(account.role)) {
     throw new Error("شما دسترسی مدیریت ندارید.");
+  }
+  return account;
+}
+
+/** دسترسی پشتیبانی: پشتیبان، ادمین و شریک مدیر */
+export async function requireStaff(
+  ctx: QueryCtx | MutationCtx,
+  token: string,
+): Promise<Doc<"accounts">> {
+  const account = await requireAccount(ctx, token);
+  if (!isStaffRole(account.role)) {
+    throw new Error("فقط پشتیبانی و مدیران به گپ کاربران دسترسی دارند.");
+  }
+  return account;
+}
+
+/** دسترسی مدیر اصلی سایت: مقام‌ها، آمار، سفارش‌ها و نظرها */
+export async function requireOwner(
+  ctx: QueryCtx | MutationCtx,
+  token: string,
+): Promise<Doc<"accounts">> {
+  const account = await requireAccount(ctx, token);
+  if (!isOwnerAccount(account)) {
+    throw new Error("فقط مدیر اصلی سایت به این بخش دسترسی دارد.");
   }
   return account;
 }

@@ -24,7 +24,7 @@ import {
 } from "react-router";
 
 export function SiteHeader() {
-  const { user, token, isAuthenticated, isAdmin, roleLabel, signOut } =
+  const { user, token, isAuthenticated, canUsePanel, roleLabel, signOut } =
     useAuth();
   const cart = useQuery(api.cart.myCart, token ? { token } : "skip");
   const thread = useQuery(
@@ -33,7 +33,7 @@ export function SiteHeader() {
   );
   const inbox = useQuery(
     api.support.adminInbox,
-    token && isAdmin ? { token } : "skip",
+    token && canUsePanel ? { token } : "skip",
   );
   // تعداد گپ‌های کاربران که هنوز جواب داده نشده (نشان اعلان پنل مدیر)
   const waitingChats = useMemo(() => {
@@ -199,7 +199,7 @@ export function SiteHeader() {
                 <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/support")}>
                   <LifeBuoy className="me-2 size-4" /> پشتیبانی
                 </DropdownMenuItem>
-                {isAdmin && (
+                {canUsePanel && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/admin")}>
@@ -263,7 +263,7 @@ export function SiteHeader() {
           <NavLink to="/support" className={navClass}>
             پشتیبانی
           </NavLink>
-          {isAdmin && (
+          {canUsePanel && (
             <Link
               to="/admin"
               className="ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-primary transition-colors hover:bg-muted"

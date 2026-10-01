@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
+import { roleInfo } from "@/lib/roles";
 import { formatDate, formatPrice } from "@/lib/shop";
 import { useQuery } from "convex/react";
 import {
@@ -21,7 +22,7 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const { user, token, isAdmin, signOut } = useAuth();
+  const { user, token, canUsePanel, isAdmin, isOwner, signOut } = useAuth();
   const cart = useQuery(api.cart.myCart, token ? { token } : "skip");
   const orders = useQuery(api.cart.myOrders, token ? { token } : "skip");
   const navigate = useNavigate();
@@ -36,6 +37,13 @@ export default function ProfilePage() {
   };
 
   if (!user) return null;
+
+  const role = roleInfo(user.role);
+  const panelHint = isOwner
+    ? "دسترسی کامل به همه بخش‌ها"
+    : isAdmin
+      ? "کالاها، مجازات و گپ کاربران"
+      : "پاسخ به گپ کاربران";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -54,12 +62,12 @@ export default function ProfilePage() {
                 </h1>
                 <Badge
                   className={
-                    isAdmin
+                    canUsePanel
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
                   }
                 >
-                  {isAdmin ? "مدیر سایت" : "کاربر"}
+                  {role.emoji} {role.label}
                 </Badge>
               </div>
               <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -109,7 +117,7 @@ export default function ProfilePage() {
               <ArrowLeft className="ms-auto size-4 text-muted-foreground transition-transform group-hover:-translate-x-1" />
             </Link>
 
-            {isAdmin ? (
+            {canUsePanel ? (
               <Link
                 to="/admin"
                 className="group flex items-center gap-3 rounded-2xl bg-foreground p-4 text-white transition-all hover:-translate-y-0.5 hover:shadow-lg"
@@ -121,9 +129,7 @@ export default function ProfilePage() {
                   <span className="block text-sm font-black">
                     پنل کنترل سایت
                   </span>
-                  <span className="text-xs text-white/60">
-                    کالاها + جواب به کاربرها
-                  </span>
+                  <span className="text-xs text-white/60">{panelHint}</span>
                 </span>
                 <ArrowLeft className="ms-auto size-4 text-white/60 transition-transform group-hover:-translate-x-1" />
               </Link>

@@ -1,12 +1,12 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAdmin } from "./helpers";
+import { requireOwner } from "./helpers";
 
 /** آمار کلی برای پنل کنترل سایت */
 export const adminStats = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await requireAdmin(ctx, token);
+    await requireOwner(ctx, token);
     const products = await ctx.db.query("products").collect();
     const accounts = await ctx.db.query("accounts").collect();
     const orders = await ctx.db.query("orders").collect();
@@ -35,7 +35,7 @@ export const adminStats = query({
 export const adminOrders = query({
   args: { token: v.string() },
   handler: async (ctx, { token }) => {
-    await requireAdmin(ctx, token);
+    await requireOwner(ctx, token);
     const orders = await ctx.db.query("orders").collect();
     const accounts = await ctx.db.query("accounts").collect();
     const names = new Map(accounts.map((a) => [a._id, a.username]));
@@ -63,7 +63,7 @@ export const setOrderStatus = mutation({
     status: v.string(),
   },
   handler: async (ctx, { token, orderId, status }) => {
-    await requireAdmin(ctx, token);
+    await requireOwner(ctx, token);
     if (!ORDER_STATUSES.includes(status)) {
       throw new Error("وضعیت سفارش نامعتبر است.");
     }

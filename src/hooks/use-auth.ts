@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { friendlyError, randomSalt, sha256Hex } from "@/lib/crypto";
 import { roleInfo } from "@/lib/roles";
+import { ADMIN_USERNAME } from "@/lib/site";
 import { getToken, setToken, subscribeSession } from "@/lib/session";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -81,13 +82,26 @@ export function useAuth() {
     }
   }, [logoutMutation]);
 
+  const role = user?.role;
+  // «ادمین» و «شریک مدیر» به بخش‌های مدیریتی پنل دسترسی دارند
+  const isAdmin = role === "admin" || role === "partner";
+  // پشتیبانی فقط گفتگوی کاربران را می‌بیند
+  const isSupervisor = role === "supervisor";
+  // هر کسی که به پنل کنترل سایت راه دارد (پشتیبانی، ادمین، شریک مدیر)
+  const canUsePanel = isAdmin || isSupervisor;
+  // مدیر اصلی سایت: شریک مدیر یا حساب رزروشده مدیر
+  const isOwner = !!user && (role === "partner" || user.username === ADMIN_USERNAME);
+
   return {
     user,
     token,
     isLoading,
     isAuthenticated: !!user,
-    // «ادمین» و «شریک مدیر» هر دو به پنل کنترل سایت دسترسی کامل دارند
-    isAdmin: user?.role === "admin" || user?.role === "partner",
+    role,
+    isAdmin,
+    isSupervisor,
+    isOwner,
+    canUsePanel,
     // همه کاربران واردشده می‌توانند نظرها را لایک کنند
     canLike: !!user,
     roleLabel: user ? roleInfo(user.role).label : "",

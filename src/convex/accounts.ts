@@ -8,6 +8,8 @@ import {
   normalizeUsername,
   publicAccount,
   requireAdmin,
+  requireOwner,
+  isOwnerAccount,
 } from "./helpers";
 
 /** نام کاربری رزرو شده برای مدیر سایت */
@@ -153,7 +155,7 @@ export const getCurrentUser = query({
 const ROLES = ["user", "supervisor", "admin", "partner"] as const;
 
 /**
- * تغییر مقام یک کاربر لاگین‌شده (فقط مدیر سایت).
+ * تغییر مقام یک کاربر لاگین‌شده (فقط مدیر اصلی سایت: شریک مدیر یا حساب رزروشده).
  * حساب مدیر اصلی و حساب خودِ مدیر قابل تغییر نیستند تا کنترل پنل از دست نرود.
  */
 export const setRole = mutation({
@@ -168,14 +170,14 @@ export const setRole = mutation({
     ),
   },
   handler: async (ctx, { token, accountId, role }) => {
-    const manager = await requireAdmin(ctx, token);
+    const manager = await requireOwner(ctx, token);
     if (manager._id === accountId) {
       throw new Error("مقام حساب خودت قابل تغییر نیست.");
     }
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("کاربر یافت نشد.");
-    if (account.usernameLower === RESERVED) {
-      throw new Error("مقام مدیر اصلی سایت قابل تغییر نیست.");
+    if (isOwnerAccount(account)) {
+      throw new Error("مقام حساب‌های مدیر اصلی سایت قابل تغییر نیست.");
     }
     if (!(ROLES as readonly string[]).includes(role)) {
       throw new Error("مقام انتخاب‌شده معتبر نیست.");

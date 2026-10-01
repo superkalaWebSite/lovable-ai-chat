@@ -69,19 +69,19 @@ import { toast } from "sonner";
 type Product = Doc<"products">;
 
 export default function AdminPage() {
-  const { user, token, isAdmin, isLoading } = useAuth();
+  const { user, token, isAdmin, isOwner, canUsePanel, isLoading } = useAuth();
   const stats = useQuery(
     api.stats.adminStats,
-    token && isAdmin ? { token } : "skip",
+    token && isOwner ? { token } : "skip",
   );
   const products = useQuery(api.products.list);
   const inbox = useQuery(
     api.support.adminInbox,
-    token && isAdmin ? { token } : "skip",
+    token && canUsePanel ? { token } : "skip",
   );
   const orders = useQuery(
     api.stats.adminOrders,
-    token && isAdmin ? { token } : "skip",
+    token && isOwner ? { token } : "skip",
   );
   const users = useQuery(
     api.punishments.listUsers,
@@ -183,9 +183,27 @@ export default function AdminPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!canUsePanel) {
     return <Navigate to="/profile" replace />;
   }
+
+  /**
+   * دسترسی هر مقام به تب‌های پنل:
+   * - شریک مدیر / مدیر اصلی: همه‌ی بخش‌ها
+   * - ادمین: فقط کالاها، مجازات و گپ کاربران
+   * - پشتیبانی: فقط گپ کاربران
+   */
+  const allowedTabs: string[] = useMemo(() => {
+    if (isOwner) {
+      return ["stats", "products", "chat", "orders", "punish", "roles", "reviews"];
+    }
+    if (isAdmin) return ["products", "chat", "punish"];
+    return ["chat"];
+  }, [isOwner, isAdmin]);
+
+  useEffect(() => {
+    if (!allowedTabs.includes(tab)) setTab(allowedTabs[0]);
+  }, [allowedTabs, tab]);
 
   const openNewProduct = () => {
     setEditing(null);
@@ -478,45 +496,62 @@ export default function AdminPage() {
         <div>
           <h1 className="text-2xl font-black sm:text-3xl">پنل کنترل سایت</h1>
           <p className="text-sm text-muted-foreground">
-            خوش اومدی {user?.username} — مدیریت کالاها، گفتگوها و آمار سایت
+            خوش اومدی {user?.username} — {roleInfo(user?.role ?? "user").label}
+            {isOwner ? " (دسترسی کامل)" : isAdmin ? " (کالاها، مجازات و گپ کاربران)" : " (گپ کاربران)"}
           </p>
         </div>
-        <Button className="ms-auto gap-2 rounded-xl" onClick={openNewProduct}>
-          <Plus className="size-4" /> افزودن محصول
-        </Button>
+        {isAdmin && (
+          <Button className="ms-auto gap-2 rounded-xl" onClick={openNewProduct}>
+            <Plus className="size-4" /> افزودن محصول
+          </Button>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={setTab} className="gap-6">
         <TabsList className="w-full justify-start gap-1 overflow-x-auto rounded-full md:justify-center">
-          <TabsTrigger value="stats" className="rounded-full">
-            📊 آمار سایت
-          </TabsTrigger>
-          <TabsTrigger value="products" className="rounded-full">
-            📦 کنترل کالاها
-          </TabsTrigger>
-          <TabsTrigger value="chat" className="shrink-0 rounded-full">
-            💬 گپ کاربران
-            {waitingCount > 0 && (
-              <span
-                title={`${waitingCount.toLocaleString("fa-IR")} گپ بی‌جواب`}
-                className="ms-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground"
-              >
-                {waitingCount.toLocaleString("fa-IR")}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="orders" className="shrink-0 rounded-full">
-            🚚 سفارش‌ها
-          </TabsTrigger>
-          <TabsTrigger value="punish" className="shrink-0 rounded-full">
-            ⚖️ مجازات
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="shrink-0 rounded-full">
-            👑 مقام‌ها
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="shrink-0 rounded-full">
-            💬 نظرها
-          </TabsTrigger>
+          {allowedTabs.includes("stats") && (
+            <TabsTrigger value="stats" className="rounded-full">
+              📊 آمار سایت
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("products") && (
+            <TabsTrigger value="products" className="rounded-full">
+              📦 کنترل کالاها
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("chat") && (
+            <TabsTrigger value="chat" className="shrink-0 rounded-full">
+              💬 گپ کاربران
+              {waitingCount > 0 && (
+                <span
+                  title={`${waitingCount.toLocaleString("fa-IR")} گپ بی‌جواب`}
+                  className="ms-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground"
+                >
+                  {waitingCount.toLocaleString("fa-IR")}
+                </span>
+              )}
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("orders") && (
+            <TabsTrigger value="orders" className="shrink-0 rounded-full">
+              🚚 سفارش‌ها
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("punish") && (
+            <TabsTrigger value="punish" className="shrink-0 rounded-full">
+              ⚖️ مجازات
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("roles") && (
+            <TabsTrigger value="roles" className="shrink-0 rounded-full">
+              👑 مقام‌ها
+            </TabsTrigger>
+          )}
+          {allowedTabs.includes("reviews") && (
+            <TabsTrigger value="reviews" className="shrink-0 rounded-full">
+              💬 نظرها
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* ───── آمار ───── */}

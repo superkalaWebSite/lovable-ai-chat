@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAccount, requireAdmin } from "./helpers";
+import { requireAccount, requireOwner } from "./helpers";
 
 /** همه کاربران واردشده می‌توانند نظرها را لایک کنند */
 
@@ -74,7 +74,7 @@ export const toggleLike = mutation({
   },
 });
 
-/** ویرایش متن و امتیاز یک نظر (فقط مدیر) */
+/** ویرایش متن و امتیاز یک نظر (فقط مدیر اصلی سایت) */
 export const update = mutation({
   args: {
     token: v.string(),
@@ -83,7 +83,7 @@ export const update = mutation({
     rating: v.number(),
   },
   handler: async (ctx, { token, reviewId, text, rating }) => {
-    await requireAdmin(ctx, token);
+    await requireOwner(ctx, token);
     const review = await ctx.db.get(reviewId);
     if (!review) throw new Error("نظر یافت نشد.");
     const clean = text.trim();
@@ -97,11 +97,11 @@ export const update = mutation({
   },
 });
 
-/** حذف یک نظر (فقط مدیر) */
+/** حذف یک نظر (فقط مدیر اصلی سایت) */
 export const remove = mutation({
   args: { token: v.string(), reviewId: v.id("reviews") },
   handler: async (ctx, { token, reviewId }) => {
-    await requireAdmin(ctx, token);
+    await requireOwner(ctx, token);
     const review = await ctx.db.get(reviewId);
     if (!review) throw new Error("نظر یافت نشد.");
     await ctx.db.delete(reviewId);

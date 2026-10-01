@@ -1,11 +1,11 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "سوپر کالا | فروشگاه اینترنتی",
+  "short_name": "سوپر کالا",
+  "description": "فروشگاه اینترنتی سوپر کالا — خرید مطمئن با ارسال سریع و پشتیبانی آنلاین",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#fbf7f1",
+  "theme_color": "#179150",
   "icons": [
     {
       "src": "/logo.svg",

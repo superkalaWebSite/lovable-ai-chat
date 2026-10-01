@@ -4,7 +4,7 @@ export const CATEGORIES = [
   { name: "لپتاپ و کامپیوتر", emoji: "💻", tile: "from-indigo-100 to-violet-200" },
   { name: "لوازم جانبی", emoji: "🎧", tile: "from-amber-100 to-orange-200" },
   { name: "خانه و آشپزخانه", emoji: "🏠", tile: "from-emerald-100 to-teal-200" },
-  { name: "پوشاک", emoji: "👕", tile: "from-pink-100 to-rose-200" },
+  { name: "پوشاک", emoji: "👕", tile: "from-stone-100 to-neutral-300" },
   { name: "ورزشی", emoji: "⚽", tile: "from-lime-100 to-green-200" },
   { name: "آرایشی و بهداشتی", emoji: "💄", tile: "from-fuchsia-100 to-purple-200" },
   { name: "کتاب و اسباب‌بازی", emoji: "📚", tile: "from-yellow-100 to-amber-200" },

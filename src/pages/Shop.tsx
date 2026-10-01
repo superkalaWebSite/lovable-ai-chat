@@ -47,13 +47,15 @@ export default function Shop() {
   };
 
   const pickCategory = (name: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (!name) params.delete("cat");
-    else params.set("cat", name);
-    setSearchParams(params, { replace: true });
+    // با انتخاب دسته، جستجوی قبلی پاک می‌شود تا همه محصولات همان دسته دیده شود
+    const params = new URLSearchParams();
+    if (name) params.set("cat", name);
+    setSearchParams(params);
   };
 
   const all = products ?? [];
+  const countFor = (name: string) =>
+    name ? all.filter((product) => product.category === name).length : all.length;
   const filtered = all
     .filter((product) => {
       const matchCat = !cat || product.category === cat;
@@ -131,6 +133,12 @@ export default function Shop() {
           }`}
         >
           همه
+          {products !== undefined && (
+            <span className="opacity-70">
+              {" "}
+              ({all.length.toLocaleString("fa-IR")})
+            </span>
+          )}
         </button>
         {CATEGORIES.map((category) => (
           <button
@@ -144,6 +152,12 @@ export default function Shop() {
             }`}
           >
             {category.emoji} {category.name}
+            {products !== undefined && (
+              <span className="opacity-70">
+                {" "}
+                ({countFor(category.name).toLocaleString("fa-IR")})
+              </span>
+            )}
           </button>
         ))}
       </div>

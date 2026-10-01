@@ -41,7 +41,7 @@ export default function ProfilePage() {
     <div className="mx-auto max-w-5xl px-4 py-8">
       {/* کارت حساب */}
       <Card className="overflow-hidden rounded-3xl border-border/70 shadow-md">
-        <div className="h-20 bg-gradient-to-l from-primary via-rose-600 to-orange-500" />
+        <div className="h-20 bg-gradient-to-l from-primary via-emerald-600 to-teal-600" />
         <CardContent className="-mt-10 pb-6">
           <div className="flex flex-wrap items-end gap-4">
             <span className="flex size-20 items-center justify-center rounded-3xl border-4 border-card bg-foreground text-3xl font-black text-white">
@@ -114,7 +114,7 @@ export default function ProfilePage() {
                 to="/admin"
                 className="group flex items-center gap-3 rounded-2xl bg-foreground p-4 text-white transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
-                <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-red-400">
+                <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-green-400">
                   <ShieldCheck className="size-5" />
                 </span>
                 <span>

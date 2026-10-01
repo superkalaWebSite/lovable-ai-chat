@@ -11,7 +11,7 @@ export function SiteFooter() {
           <Link to="/" className="flex items-center gap-2">
             <img src={logo} alt="سوپر کالا" className="size-9 rounded-xl" />
             <span className="text-lg font-black text-white">
-              سوپر <span className="text-red-400">کالا</span>
+              سوپر <span className="text-green-400">کالا</span>
             </span>
           </Link>
           <p className="mt-4 text-sm leading-7 text-white/60">
@@ -19,7 +19,7 @@ export function SiteFooter() {
             ارسال سریع به سراسر کشور و پشتیبانی واقعی.
           </p>
           <div className="mt-4 flex items-center gap-2 text-sm text-white/60">
-            <HeartHandshake className="size-4 text-red-400" />
+            <HeartHandshake className="size-4 text-green-400" />
             با افتخار در خدمت مشتری‌های عزیز
           </div>
         </div>
@@ -31,7 +31,7 @@ export function SiteFooter() {
               <li key={category.name}>
                 <Link
                   to={`/shop?cat=${encodeURIComponent(category.name)}`}
-                  className="text-white/60 transition-colors hover:text-red-400"
+                  className="text-white/60 transition-colors hover:text-green-400"
                 >
                   {category.emoji} {category.name}
                 </Link>
@@ -44,27 +44,27 @@ export function SiteFooter() {
           <h3 className="mb-4 text-sm font-bold text-white">دسترسی سریع</h3>
           <ul className="space-y-2.5 text-sm">
             <li>
-              <Link to="/shop" className="text-white/60 transition-colors hover:text-red-400">
+              <Link to="/shop" className="text-white/60 transition-colors hover:text-green-400">
                 فروشگاه
               </Link>
             </li>
             <li>
-              <Link to="/cart" className="text-white/60 transition-colors hover:text-red-400">
+              <Link to="/cart" className="text-white/60 transition-colors hover:text-green-400">
                 سبد خرید
               </Link>
             </li>
             <li>
-              <Link to="/profile" className="text-white/60 transition-colors hover:text-red-400">
+              <Link to="/profile" className="text-white/60 transition-colors hover:text-green-400">
                 پروفایل من
               </Link>
             </li>
             <li>
-              <Link to="/support" className="text-white/60 transition-colors hover:text-red-400">
+              <Link to="/support" className="text-white/60 transition-colors hover:text-green-400">
                 گپ با پشتیبانی
               </Link>
             </li>
             <li>
-              <Link to="/auth" className="text-white/60 transition-colors hover:text-red-400">
+              <Link to="/auth" className="text-white/60 transition-colors hover:text-green-400">
                 ورود / ثبت‌نام
               </Link>
             </li>
@@ -75,15 +75,15 @@ export function SiteFooter() {
           <h3 className="mb-4 text-sm font-bold text-white">راهنمای تماس</h3>
           <ul className="space-y-3 text-sm text-white/60">
             <li className="flex items-center gap-2">
-              <Phone className="size-4 shrink-0 text-red-400" />
+              <Phone className="size-4 shrink-0 text-green-400" />
               ۰۲۱-۹۱۰۰۱۲۳۴
             </li>
             <li className="flex items-center gap-2">
-              <Mail className="size-4 shrink-0 text-red-400" />
+              <Mail className="size-4 shrink-0 text-green-400" />
               پشتیبانی آنلاین ۲۴ ساعته
             </li>
             <li className="flex items-center gap-2">
-              <MapPin className="size-4 shrink-0 text-red-400" />
+              <MapPin className="size-4 shrink-0 text-green-400" />
               تهران، خیابان آزادی، پاساژ سوپر کالا
             </li>
           </ul>

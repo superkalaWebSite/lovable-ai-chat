@@ -120,6 +120,12 @@ export default function AdminPage() {
   const activeThread =
     threads.find((thread) => thread.accountId === activeUser) ?? threads[0];
 
+  // گپ‌هایی که آخرین پیامشان از کاربر است و هنوز جواب داده نشده
+  const waitingCount = threads.filter((thread) => {
+    const last = thread.messages[thread.messages.length - 1];
+    return last?.from === "user";
+  }).length;
+
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -254,19 +260,19 @@ export default function AdminPage() {
       value: formatPrice(stats?.revenue ?? 0),
       suffix: "تومان",
       icon: Wallet,
-      tone: "bg-amber-100 text-amber-700",
+      tone: "bg-cyan-100 text-cyan-700",
     },
     {
       label: "پیام‌های پشتیبانی",
       value: stats?.messages ?? 0,
       icon: MessageCircle,
-      tone: "bg-rose-100 text-rose-700",
+      tone: "bg-teal-100 text-teal-700",
     },
     {
       label: "کالای کم‌موجود (≤۵)",
       value: stats?.lowStock ?? 0,
       icon: AlertTriangle,
-      tone: "bg-orange-100 text-orange-700",
+      tone: "bg-amber-100 text-amber-700",
     },
   ];
 
@@ -274,7 +280,7 @@ export default function AdminPage() {
     <div className="mx-auto max-w-6xl px-4 py-8">
       {/* سربرگ */}
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-red-400">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-green-400">
           <ShieldCheck className="size-6" />
         </span>
         <div>
@@ -298,9 +304,12 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="chat" className="rounded-full">
             💬 گپ کاربران
-            {threads.length > 0 && (
-              <span className="ms-1 rounded-full bg-primary px-1.5 text-[10px] font-black text-primary-foreground">
-                {threads.length.toLocaleString("fa-IR")}
+            {waitingCount > 0 && (
+              <span
+                title={`${waitingCount.toLocaleString("fa-IR")} گپ بی‌جواب`}
+                className="ms-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground"
+              >
+                {waitingCount.toLocaleString("fa-IR")}
               </span>
             )}
           </TabsTrigger>
@@ -498,6 +507,12 @@ export default function AdminPage() {
                           {last?.text}
                         </span>
                       </span>
+                      {last?.from === "user" && (
+                        <span
+                          title="بدون جواب"
+                          className="size-2.5 shrink-0 rounded-full bg-primary"
+                        />
+                      )}
                     </button>
                   );
                 })}

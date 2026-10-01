@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
 import { friendlyError } from "@/lib/crypto";
 import { formatTime } from "@/lib/shop";
+import { markSupportSeen } from "@/lib/support-seen";
 import { useMutation, useQuery } from "convex/react";
 import { Loader2, Send, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -29,6 +30,11 @@ export default function SupportPage() {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages?.length]);
+
+  // با دیدن صفحه، نشان اعلانِ پاسخ‌های پشتیبانی در هدر پاک می‌شود
+  useEffect(() => {
+    if (messages !== undefined) markSupportSeen();
+  }, [messages]);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

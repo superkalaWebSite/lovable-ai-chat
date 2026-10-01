@@ -31,11 +31,11 @@ export const add = mutation({
     if (!product) throw new Error("محصول یافت نشد.");
     if (product.stock < 1) throw new Error("این محصول موجود نیست.");
 
-    const existing = await ctx.db
+    const items = await ctx.db
       .query("cartItems")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))
-      .filter((q) => q.eq(q.field("productId"), productId))
-      .unique();
+      .collect();
+    const existing = items.find((item) => item.productId === productId);
 
     if (existing) {
       await ctx.db.patch(existing._id, { qty: existing.qty + 1 });

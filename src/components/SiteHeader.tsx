@@ -10,18 +10,40 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/use-auth";
+import { getSupportSeenAt, subscribeSupportSeen } from "@/lib/support-seen";
 import { CATEGORIES } from "@/lib/shop";
 import { useQuery } from "convex/react";
 import { LifeBuoy, LogOut, Search, ShieldCheck, ShoppingCart, UserRound } from "lucide-react";
-import { useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router";
+import { useState, useSyncExternalStore } from "react";
+import {
+  Link,
+  NavLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 
 export function SiteHeader() {
   const { user, token, isAuthenticated, isAdmin, signOut } = useAuth();
   const cart = useQuery(api.cart.myCart, token ? { token } : "skip");
+  const thread = useQuery(
+    api.support.myThread,
+    token && isAuthenticated ? { token } : "skip",
+  );
+  const seenAt = useSyncExternalStore(
+    subscribeSupportSeen,
+    getSupportSeenAt,
+    () => 0,
+  );
+  const unreadReplies = (thread ?? []).filter(
+    (message) => message.from === "admin" && message.createdAt > seenAt,
+  ).length;
   const cartCount = cart?.reduce((sum, item) => sum + item.qty, 0) ?? 0;
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [term, setTerm] = useState("");
+  const activeCat = searchParams.get("cat") ?? "";
 
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,9 +103,20 @@ export function SiteHeader() {
             <Search className="size-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" className="rounded-full" title="پشتیبانی" asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative rounded-full"
+            title={unreadReplies > 0 ? "پاسخ جدید پشتیبانی" : "پشتیبانی"}
+            asChild
+          >
             <Link to="/support">
               <LifeBuoy className="size-5" />
+              {unreadReplies > 0 && (
+                <span className="absolute -top-0.5 -end-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                  {unreadReplies.toLocaleString("fa-IR")}
+                </span>
+              )}
             </Link>
           </Button>
 
@@ -166,17 +199,28 @@ export function SiteHeader() {
       {/* ردیف دسته‌بندی */}
       <nav className="hidden border-t border-border/60 bg-muted/40 lg:block">
         <div className="mx-auto flex h-10 max-w-7xl items-center gap-1 px-4 text-sm">
-          <NavLink to="/shop" className={navClass} end>
+          <Link
+            to="/shop"
+            className={`rounded-full px-3 py-1.5 transition-colors ${
+              location.pathname === "/shop" && !activeCat
+                ? "bg-primary/10 font-bold text-primary"
+                : "text-foreground/70 hover:bg-muted hover:text-foreground"
+            }`}
+          >
             همه محصولات
-          </NavLink>
+          </Link>
           {CATEGORIES.slice(0, 6).map((category) => (
-            <NavLink
+            <Link
               key={category.name}
               to={`/shop?cat=${encodeURIComponent(category.name)}`}
-              className={navClass}
+              className={`rounded-full px-3 py-1.5 transition-colors ${
+                location.pathname === "/shop" && activeCat === category.name
+                  ? "bg-primary/10 font-bold text-primary"
+                  : "text-foreground/70 hover:bg-muted hover:text-foreground"
+              }`}
             >
               {category.emoji} {category.name}
-            </NavLink>
+            </Link>
           ))}
           <NavLink to="/support" className={navClass}>
             پشتیبانی

@@ -46,7 +46,9 @@ export function ProductCard({
         </div>
 
         <div className="space-y-2 p-4">
-          <p className="text-xs text-muted-foreground">{product.brand}</p>
+          <p className="text-xs text-muted-foreground">
+            {product.brand} · {product.category}
+          </p>
           <h3 className="line-clamp-2 min-h-11 text-sm font-medium leading-6">
             {product.title}
           </h3>

@@ -213,7 +213,7 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                         id="login-username"
                         value={username}
                         onChange={(event) => setUsername(event.target.value)}
-                        placeholder="مثال: کیان دریاباری"
+                        placeholder="مثال: علی یوسفی"
                         className="h-11 rounded-xl ps-9"
                         autoComplete="username"
                         disabled={busy}
@@ -394,7 +394,7 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
         </Card>
 
         {/* پنل تصویری */}
-        <div className="relative hidden min-h-[500px] overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-rose-600 to-orange-500 p-10 text-white lg:flex lg:flex-col lg:justify-center">
+        <div className="relative hidden min-h-[500px] overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-emerald-600 to-teal-600 p-10 text-white lg:flex lg:flex-col lg:justify-center">
           <div className="absolute -start-16 -top-16 size-64 rounded-full bg-white/10" />
           <div className="absolute -bottom-20 -end-10 size-72 rounded-full bg-black/10" />
 

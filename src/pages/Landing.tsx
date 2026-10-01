@@ -225,7 +225,7 @@ export default function Landing() {
               <p className="text-xs text-white/70">پرفروش‌ترین این هفته</p>
               <p className="text-sm font-black">
                 📱 گلکسی A55 —{" "}
-                <span className="text-red-400">
+                <span className="text-green-400">
                   {formatPrice(18990000)} تومان
                 </span>
               </p>
@@ -335,19 +335,19 @@ export default function Landing() {
       <section className="mx-auto mt-16 max-w-7xl px-4">
         <div className="grid gap-6 overflow-hidden rounded-3xl bg-foreground p-6 text-white sm:p-8 lg:grid-cols-[1.2fr_1fr]">
           <div className="flex flex-col justify-center">
-            <span className="w-fit rounded-full bg-red-500/20 px-3 py-1 text-xs font-bold text-red-300">
+            <span className="w-fit rounded-full bg-green-500/20 px-3 py-1 text-xs font-bold text-green-300">
               ⏳ پیشنهاد شگفت‌انگیز امروز
             </span>
             <h2 className="mt-4 text-2xl font-black leading-9 sm:text-3xl">
               روی محصولات منتخب تا{" "}
-              <span className="text-red-400">۴۰٪ تخفیف</span> — تا پایان
+              <span className="text-green-400">۴۰٪ تخفیف</span> — تا پایان
               امروز!
             </h2>
             <p className="mt-2 text-sm leading-7 text-white/60">
               موجودی محدوده؛ همین الان سفارش بده تا فردا ارسال بشه.
             </p>
             <div className="mt-5">
-              <Button size="lg" className="h-12 w-fit gap-2 rounded-2xl bg-red-500 text-white hover:bg-red-600" asChild>
+              <Button size="lg" className="h-12 w-fit gap-2 rounded-2xl bg-green-600 text-white hover:bg-green-700" asChild>
                 <Link to="/shop">
                   دیدن تخفیف‌ها <ArrowLeft className="size-4" />
                 </Link>
@@ -373,7 +373,7 @@ export default function Landing() {
                     {formatPrice(deal.price)} تومان
                   </span>
                 </span>
-                <span className="rounded-lg bg-red-500 px-2 py-1 text-xs font-black">
+                <span className="rounded-lg bg-green-600 px-2 py-1 text-xs font-black">
                   {discountPercent(deal.price, deal.oldPrice).toLocaleString("fa-IR")}٪
                 </span>
               </Link>
@@ -437,7 +437,7 @@ export default function Landing() {
       <section className="mx-auto mt-16 max-w-7xl px-4">
         <motion.div
           {...fadeUp()}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-primary via-rose-600 to-orange-500 px-6 py-12 text-center text-white sm:px-12"
+          className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-primary via-emerald-600 to-teal-600 px-6 py-12 text-center text-white sm:px-12"
         >
           <div className="pointer-events-none absolute -start-10 -top-10 size-48 rounded-full bg-white/10" />
           <div className="pointer-events-none absolute -bottom-14 -end-6 size-56 rounded-full bg-black/10" />
@@ -449,7 +449,7 @@ export default function Landing() {
             سبد خرید، پروفایل، سفارش‌ها و گپ پشتیبانی در اختیارته.
           </p>
           <div className="relative mt-7 flex flex-wrap justify-center gap-3">
-            <Button size="lg" className="h-12 gap-2 rounded-2xl bg-white px-8 text-rose-700 hover:bg-white/90" asChild>
+            <Button size="lg" className="h-12 gap-2 rounded-2xl bg-white px-8 text-green-700 hover:bg-white/90" asChild>
               <Link to="/auth">
                 ساخت حساب رایگان <ArrowLeft className="size-4" />
               </Link>

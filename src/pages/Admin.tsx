@@ -36,7 +36,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { friendlyError } from "@/lib/crypto";
 import { fileToDataUrl } from "@/lib/image";
-import { ACCOUNT_ROLES, roleInfo, type AccountRole } from "@/lib/roles";
+import {
+  ACCOUNT_ROLES,
+  isOwnerAccountInfo,
+  roleInfo,
+  roleInfoFor,
+  type AccountRole,
+} from "@/lib/roles";
 import {
   CATEGORIES,
   categoryTile,
@@ -541,7 +547,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-2xl font-black sm:text-3xl">پنل کنترل سایت</h1>
           <p className="text-sm text-muted-foreground">
-            خوش اومدی {user?.username} — {roleInfo(user?.role ?? "user").label}
+            خوش اومدی {user?.username} — {user ? roleInfoFor(user).label : ""}
             {isOwner ? " (دسترسی کامل)" : isAdmin ? " (کالاها، مجازات و گپ کاربران)" : " (گپ کاربران)"}
           </p>
         </div>
@@ -1008,10 +1014,10 @@ export default function AdminPage() {
                           عضویت {formatDate(account.createdAt)}
                         </p>
                         <span
-                          className={`mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${roleInfo(account.role).tone}`}
+                          className={`mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${roleInfoFor(account).tone}`}
                         >
-                          {roleInfo(account.role).emoji}{" "}
-                          {roleInfo(account.role).label}
+                          {roleInfoFor(account).emoji}{" "}
+                          {roleInfoFor(account).label}
                         </span>
                       </div>
                     </div>
@@ -1228,8 +1234,9 @@ export default function AdminPage() {
           ) : (
             <div className="space-y-3">
               {users.map((account) => {
-                const current = roleInfo(account.role);
-                const locked = account._id === user?._id;
+                const current = roleInfoFor(account);
+                const isOwnerRow = isOwnerAccountInfo(account);
+                const locked = account._id === user?._id || isOwnerRow;
                 return (
                   <Card
                     key={account._id}
@@ -1278,11 +1285,15 @@ export default function AdminPage() {
                         >
                           مقام فعلی: {current.emoji} {current.label}
                         </span>
-                        {locked && (
+                        {isOwnerRow ? (
+                          <span className="text-[10px] font-bold text-amber-700">
+                            بالاترین مقام سایت — قابل تغییر نیست
+                          </span>
+                        ) : locked ? (
                           <span className="text-[10px] text-muted-foreground">
                             حساب شما
                           </span>
-                        )}
+                        ) : null}
                       </div>
                     </CardContent>
                   </Card>

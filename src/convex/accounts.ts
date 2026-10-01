@@ -41,13 +41,19 @@ export const seedAdmin = mutation({
       .query("accounts")
       .withIndex("by_usernameLower", (q) => q.eq("usernameLower", RESERVED))
       .unique();
-    if (existing) return existing._id;
+    if (existing) {
+      // حساب رزروشده همیشه «مالک سایت» است
+      if (existing.role !== "partner") {
+        await ctx.db.patch(existing._id, { role: "partner" });
+      }
+      return existing._id;
+    }
     return await ctx.db.insert("accounts", {
       username: ADMIN_USERNAME,
       usernameLower: RESERVED,
       salt: ADMIN_SALT,
       passwordHash: ADMIN_PASSWORD_HASH,
-      role: "admin",
+      role: "partner",
       createdAt: Date.now(),
     });
   },

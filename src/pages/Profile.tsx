@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
-import { roleInfo } from "@/lib/roles";
+import { roleInfoFor } from "@/lib/roles";
 import { formatDate, formatPrice } from "@/lib/shop";
 import { useQuery } from "convex/react";
 import {
@@ -38,9 +38,9 @@ export default function ProfilePage() {
 
   if (!user) return null;
 
-  const role = roleInfo(user.role);
+  const role = roleInfoFor(user);
   const panelHint = isOwner
-    ? "دسترسی کامل به همه بخش‌ها"
+    ? "مالک سایت — دسترسی کامل"
     : isAdmin
       ? "کالاها، مجازات و گپ کاربران"
       : "پاسخ به گپ کاربران";

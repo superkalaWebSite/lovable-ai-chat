@@ -1,0 +1,17 @@
+{
+  "name": "سوپر کالا | فروشگاه اینترنتی",
+  "short_name": "سوپر کالا",
+  "description": "فروشگاه اینترنتی سوپر کالا — خرید مطمئن با ارسال سریع و پشتیبانی آنلاین",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbf7f1",
+  "theme_color": "#179150",
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

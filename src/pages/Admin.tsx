@@ -181,7 +181,7 @@ export default function AdminPage() {
   const punishable = useMemo(
     () =>
       (users ?? []).filter(
-        (item) => item.role !== "admin" && item.role !== "partner",
+        (item) => item.role !== "admin" && !isOwnerAccountInfo(item),
       ),
     [users],
   );
@@ -303,7 +303,7 @@ export default function AdminPage() {
     }
   };
 
-  /** تغییر مقام یک کاربر (کاربر / پشتیبانی / ادمین / شریک مدیر) */
+  /** تغییر مقام یک کاربر (کاربر / پشتیبانی / ادمین) */
   const changeRole = async (accountId: Id<"accounts">, role: AccountRole) => {
     try {
       await roleMutation({ token, accountId, role });
@@ -1224,9 +1224,13 @@ export default function AdminPage() {
             👑 به هر کاربر لاگین‌شده می‌توانی مقام بدهی یا آن را عوض کنی:{" "}
             <b className="text-foreground">کاربر</b> (حساب عادی)،{" "}
             <b className="text-foreground">پشتیبانی</b> (مسئول گفتگو با کاربران)،{" "}
-            <b className="text-foreground">ادمین</b> (دسترسی کامل به پنل) و{" "}
-            <b className="text-foreground">شریک مدیر</b> (بالاترین مقام، مثل
-            مالک سایت). تغییر مقام بلافاصله اعمال می‌شود.
+            <b className="text-foreground">ادمین</b> (کالاها، مجازات و تغییر مقام)
+            {" "}
+            <b className="text-foreground">مدیر سایت</b> (حساب رزروشده، بالاترین
+            مقام) هیچ‌وقت تغییر نمی‌کند.{" "}
+            {isOwner
+              ? "تو به‌عنوان مدیر سایت می‌توانی هر سه مقام را تعیین کنی."
+              : "ادمین فقط می‌تواند مقام کاربر یا پشتیبانی تعیین کند."}
           </div>
 
           {users === undefined ? (

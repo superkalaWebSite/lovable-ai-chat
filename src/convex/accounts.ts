@@ -37,25 +37,40 @@ async function createSession(
 export const seedAdmin = mutation({
   args: {},
   handler: async (ctx) => {
+    // حساب رزروشده = مدیر سایت (نقش ذخیره‌شده: ادمین، ولی با دسترسی کامل)
     const existing = await ctx.db
       .query("accounts")
       .withIndex("by_usernameLower", (q) => q.eq("usernameLower", RESERVED))
       .unique();
     if (existing) {
-      // حساب رزروشده همیشه «مالک سایت» است
-      if (existing.role !== "partner") {
-        await ctx.db.patch(existing._id, { role: "partner" });
+      if (existing.role !== "admin") {
+        await ctx.db.patch(existing._id, { role: "admin" });
       }
-      return existing._id;
+    } else {
+      await ctx.db.insert("accounts", {
+        username: ADMIN_USERNAME,
+        usernameLower: RESERVED,
+        salt: ADMIN_SALT,
+        passwordHash: ADMIN_PASSWORD_HASH,
+        role: "admin",
+        createdAt: Date.now(),
+      });
     }
-    return await ctx.db.insert("accounts", {
-      username: ADMIN_USERNAME,
-      usernameLower: RESERVED,
-      salt: ADMIN_SALT,
-      passwordHash: ADMIN_PASSWORD_HASH,
-      role: "partner",
-      createdAt: Date.now(),
-    });
+
+    // حساب‌های قدیمی با نقش «شریک مدیر» به کاربر عادی برمی‌گردند
+    // (مدیر سایت فقط حساب رزروشده است)
+    const legacy = await ctx.db
+      .query("accounts")
+      .withIndex("by_usernameLower")
+      .collect();
+    for (const account of legacy) {
+      if (
+        account.role === "partner" &&
+        account.usernameLower !== RESERVED
+      ) {
+        await ctx.db.patch(account._id, { role: "user" });
+      }
+    }
   },
 });
 
@@ -158,11 +173,17 @@ export const getCurrentUser = query({
 });
 
 /** مقام‌های قابل انتخاب در پنل مدیریت */
-const ROLES = ["user", "supervisor", "admin", "partner"] as const;
+const ROLES = ["user", "supervisor", "admin"] as const;
+
+/** رتبه‌ی مقام‌ها — کسی نمی‌تواند بالاتر از سطح خودش مقام بدهد */
+const ROLE_RANK: Record<string, number> = { user: 0, supervisor: 1, admin: 2 };
 
 /**
- * تغییر مقام یک کاربر لاگین‌شده (فقط مدیر اصلی سایت: شریک مدیر یا حساب رزروشده).
- * حساب مدیر اصلی و حساب خودِ مدیر قابل تغییر نیستند تا کنترل پنل از دست نرود.
+ * تغییر مقام یک کاربر لاگین‌شده.
+ * - مدیر سایت (حساب رزروشده): می‌تواند کاربر / پشتیبانی / ادمین تعیین کند.
+ * - ادمین: فقط می‌تواند کاربر و پشتیبانی تعیین کند (نه ادمین).
+ * - پشتیبانی: اصلاً دسترسی تعیین مقام ندارد.
+ * - هیچ‌کس نمی‌تواند مقامی بالاتر از سطح خودش بدهد یا حساب مدیر سایت را تغییر دهد.
  */
 export const setRole = mutation({
   args: {
@@ -172,21 +193,28 @@ export const setRole = mutation({
       v.literal("user"),
       v.literal("supervisor"),
       v.literal("admin"),
-      v.literal("partner"),
     ),
   },
   handler: async (ctx, { token, accountId, role }) => {
-    const manager = await requireOwner(ctx, token);
+    const manager = await requireAdmin(ctx, token);
+    const owner = isOwnerAccount(manager);
+    if (!owner && manager.role !== "admin") {
+      throw new Error("فقط ادمین و مدیر سایت می‌توانند مقام تعیین کنند.");
+    }
     if (manager._id === accountId) {
       throw new Error("مقام حساب خودت قابل تغییر نیست.");
     }
     const account = await ctx.db.get(accountId);
     if (!account) throw new Error("کاربر یافت نشد.");
     if (isOwnerAccount(account)) {
-      throw new Error("مقام حساب‌های مدیر اصلی سایت قابل تغییر نیست.");
+      throw new Error("مقام مدیر سایت قابل تغییر نیست.");
     }
     if (!(ROLES as readonly string[]).includes(role)) {
       throw new Error("مقام انتخاب‌شده معتبر نیست.");
+    }
+    // ادمین فقط می‌تواند مقامی پایین‌تر از خودش بدهد
+    if (!owner && ROLE_RANK[role] >= ROLE_RANK[manager.role]) {
+      throw new Error("ادمین فقط می‌تواند مقام کاربر یا پشتیبانی تعیین کند.");
     }
     await ctx.db.patch(accountId, { role });
     return accountId;

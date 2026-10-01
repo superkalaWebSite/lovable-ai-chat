@@ -29,8 +29,8 @@ export async function requireAccount(
   return account;
 }
 
-/** مقام‌هایی که به پنل کنترل سایت دسترسی مدیریتی دارند */
-export const ADMIN_ROLES = ["admin", "partner"] as const;
+/** مقام‌هایی که به بخش‌های مدیریتی پنل دسترسی دارند */
+export const ADMIN_ROLES = ["admin"] as const;
 
 /** مقام‌هایی که به گفتگوی پشتیبانی کاربران دسترسی دارند */
 export const STAFF_ROLES = ["supervisor", "admin", "partner"] as const;
@@ -48,10 +48,7 @@ export function isStaffRole(role: string): boolean {
  * فقط این حساب‌ها اجازه تغییر مقام‌ها و دیدن آمار/سفارش‌ها/نظرها را دارند.
  */
 export function isOwnerAccount(account: Doc<"accounts">): boolean {
-  return (
-    account.role === "partner" ||
-    account.usernameLower === normalizeUsername(ADMIN_USERNAME)
-  );
+  return account.usernameLower === normalizeUsername(ADMIN_USERNAME);
 }
 
 export async function requireAdmin(

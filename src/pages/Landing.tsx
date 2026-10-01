@@ -360,34 +360,36 @@ export default function Landing() {
                 key={deal._id}
                 type="button"
                 onClick={() => setSelected(deal)}
-                className="group flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
+                className="group w-full rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
               >
-                <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-2xl">
-                  {deal.image ? (
-                    <img src={deal.image} alt="" className="size-full object-cover" />
-                  ) : (
-                    deal.emoji
-                  )}
-                </span>
-                <span className="min-w-0 max-w-[78%]">
-                  <span className="block truncate text-sm font-bold">
-                    {deal.title}
-                  </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-bold text-white">
-                      {formatPrice(deal.price)} تومان
-                    </span>
-                    {deal.oldPrice !== undefined && deal.oldPrice > deal.price && (
-                      <span className="text-[11px] text-white/40 line-through">
-                        {formatPrice(deal.oldPrice)}
-                      </span>
+                <span className="mx-auto flex w-fit max-w-full items-center gap-2.5">
+                  <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-2xl">
+                    {deal.image ? (
+                      <img src={deal.image} alt="" className="size-full object-cover" />
+                    ) : (
+                      deal.emoji
                     )}
-                    <span className="rounded-md bg-green-600 px-1.5 py-0.5 text-[10px] font-black">
-                      {discountPercent(deal.price, deal.oldPrice).toLocaleString("fa-IR")}٪
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-bold">
+                      {deal.title}
+                    </span>
+                    <span className="mt-1 flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-bold text-white">
+                        {formatPrice(deal.price)} تومان
+                      </span>
+                      {deal.oldPrice !== undefined && deal.oldPrice > deal.price && (
+                        <span className="text-[11px] text-white/40 line-through">
+                          {formatPrice(deal.oldPrice)}
+                        </span>
+                      )}
+                      <span className="rounded-md bg-green-600 px-1.5 py-0.5 text-[10px] font-black">
+                        {discountPercent(deal.price, deal.oldPrice).toLocaleString("fa-IR")}٪
+                      </span>
                     </span>
                   </span>
+                  <ArrowLeft className="size-4 shrink-0 text-white/40 transition-transform group-hover:-translate-x-0.5" />
                 </span>
-                <ArrowLeft className="size-4 shrink-0 text-white/40 transition-transform group-hover:-translate-x-0.5" />
               </button>
             ))}
             {products !== undefined && deals.length === 0 && (

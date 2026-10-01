@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATEGORIES, discountPercent, formatDate, formatPrice } from "@/lib/shop";
 import { useAuth } from "@/hooks/use-auth";
+import { useReviewLikes } from "@/hooks/use-review-likes";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -17,6 +18,7 @@ import {
   ChevronDown,
   CreditCard,
   Headphones,
+  Heart,
   MessageSquare,
   Search,
   ShieldCheck,
@@ -60,6 +62,7 @@ function fadeUp(delay = 0) {
 
 export default function Landing() {
   const { isAuthenticated } = useAuth();
+  const { canLike, likeCount, isLiked, toggleLike } = useReviewLikes();
   const products = useQuery(api.products.list);
   const reviews = useQuery(api.reviews.list);
   const navigate = useNavigate();
@@ -469,6 +472,35 @@ export default function Landing() {
                 <blockquote className="mt-4 text-sm leading-7 text-muted-foreground">
                   «{review.text}»
                 </blockquote>
+                <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${
+                      likeCount(review) > 0
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    ❤️ {likeCount(review).toLocaleString("fa-IR")}
+                    {likeCount(review) > 0 && " — پشتیبانی دیده ✓"}
+                  </span>
+                  {canLike && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isLiked(review) ? "default" : "outline"}
+                      className="h-8 gap-1 rounded-full px-3 text-xs"
+                      title="لایک نظر تا کاربر حس دیده شدن کند"
+                      onClick={() => void toggleLike(review._id)}
+                    >
+                      <Heart
+                        className={`size-3.5 ${
+                          isLiked(review) ? "fill-current" : ""
+                        }`}
+                      />
+                      {isLiked(review) ? "لایک شد" : "لایک کن"}
+                    </Button>
+                  )}
+                </div>
               </motion.figure>
             ))}
           </div>

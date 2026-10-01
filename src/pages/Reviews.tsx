@@ -1,5 +1,4 @@
 import { api } from "@/convex/_generated/api";
-import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
+import { useReviewLikes } from "@/hooks/use-review-likes";
 import { friendlyError } from "@/lib/crypto";
 import { getToken } from "@/lib/session";
 import { formatDate } from "@/lib/shop";
@@ -28,10 +28,10 @@ import { Link } from "react-router";
 import { toast } from "sonner";
 
 export default function ReviewsPage() {
-  const { isAuthenticated, canLike, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
+  const { canLike, likeCount, isLiked, toggleLike } = useReviewLikes();
   const reviews = useQuery(api.reviews.list);
   const addMutation = useMutation(api.reviews.add);
-  const likeMutation = useMutation(api.reviews.toggleLike);
 
   const [rating, setRating] = useState(5);
   const [text, setText] = useState("");
@@ -57,18 +57,7 @@ export default function ReviewsPage() {
   };
 
   /** لایک/برداشتن لایک نظر — فقط پشتیبانی و مدیران */
-  const toggleLike = async (reviewId: Id<"reviews">) => {
-    try {
-      await likeMutation({ token: getToken(), reviewId });
-    } catch (error) {
-      toast.error(friendlyError(error));
-    }
-  };
-
-  const likeCount = (review: { likedBy?: Id<"accounts">[] }) =>
-    (review.likedBy ?? []).length;
-  const isLiked = (review: { likedBy?: Id<"accounts">[] }) =>
-    !!user && (review.likedBy ?? []).includes(user._id);
+  
 
   /** آیا مدیر ثبت نظر این کاربر را غیرفعال کرده است؟ */
   const bannedUntil = user?.reviewBannedUntil ?? 0;
@@ -268,7 +257,11 @@ export default function ReviewsPage() {
                         title="لایک نظر تا کاربر حس دیده شدن کند"
                         onClick={() => void toggleLike(review._id)}
                       >
-                        <Heart className="size-3.5" />
+                        <Heart
+                          className={`size-3.5 ${
+                            isLiked(review) ? "fill-current" : ""
+                          }`}
+                        />
                         {isLiked(review) ? "لایک شد" : "لایک کن"}
                       </Button>
                     )}

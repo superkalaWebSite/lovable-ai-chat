@@ -12,6 +12,9 @@ import {
 /** نام کاربری رزرو شده برای مدیر سایت */
 const RESERVED = normalizeUsername(ADMIN_USERNAME);
 
+/** هش معتبر SHA-256 باید دقیقا ۶۴ کاراکتر hex باشد */
+const HEX64 = /^[0-9a-f]{64}$/;
+
 async function createSession(
   ctx: MutationCtx,
   accountId: Id<"accounts">,
@@ -77,6 +80,9 @@ export const register = mutation({
     if (clean.length < 3) {
       throw new Error("نام کاربری باید حداقل ۳ حرف باشد.");
     }
+    if (!HEX64.test(passwordHash) || salt.length < 16) {
+      throw new Error("اطلاعات رمز عبور نامعتبر است. دوباره تلاش کنید.");
+    }
     const lower = normalizeUsername(clean);
     if (lower === RESERVED) {
       throw new Error("این نام کاربری رزرو شده است.");
@@ -105,13 +111,21 @@ export const register = mutation({
 export const login = mutation({
   args: { username: v.string(), passwordHash: v.string() },
   handler: async (ctx, { username, passwordHash }) => {
+    // هر ورودی غیراستاندارد همان اول رد می‌شود
+    if (!HEX64.test(passwordHash) || username.trim().length < 3) {
+      throw new Error("نام کاربری یا رمز عبور اشتباه است.");
+    }
     const account = await ctx.db
       .query("accounts")
       .withIndex("by_usernameLower", (q) =>
         q.eq("usernameLower", normalizeUsername(username)),
       )
       .unique();
-    if (!account || account.passwordHash !== passwordHash) {
+    if (
+      !account ||
+      !account.passwordHash ||
+      account.passwordHash !== passwordHash
+    ) {
       throw new Error("نام کاربری یا رمز عبور اشتباه است.");
     }
     const token = await createSession(ctx, account._id);

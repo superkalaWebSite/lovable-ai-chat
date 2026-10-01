@@ -16,15 +16,19 @@ import { useConvex } from "convex/react";
 import {
   ArrowLeft,
   ArrowRight,
+  Eye,
+  EyeOff,
   KeyRound,
   Loader2,
   Lock,
+  LogOut,
   Pencil,
   ShieldCheck,
   ShoppingCart,
+  UserCheck,
   UserRound,
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 
@@ -38,8 +42,7 @@ function resolveRedirect(returnTo: string | null, fallback: string) {
 }
 
 function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
-  const { isLoading: authLoading, isAuthenticated, signIn, signUp } =
-    useAuth();
+  const { isAuthenticated, signIn, signUp, signOut, user } = useAuth();
   const convex = useConvex();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -55,12 +58,6 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate(redirect, { replace: true });
-    }
-  }, [authLoading, isAuthenticated, navigate, redirect]);
 
   const switchMode = (next: "login" | "register") => {
     setMode(next);
@@ -151,6 +148,39 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
     }
   };
 
+  // اگر کاربر از قبل وارد شده باشد، به جای فرم، پیام «وارد شده‌اید» نشان داده می‌شود
+  if (isAuthenticated && user) {
+    return (
+      <div className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-md rounded-3xl border-border/70 p-6 text-center shadow-xl">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl">
+            ✅
+          </div>
+          <h1 className="text-xl font-black">شما وارد شده‌اید</h1>
+          <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            حساب <b className="text-foreground">{user.username}</b> فعال است.
+            برای ورود با یک حساب دیگر، اول خارج شوید.
+          </p>
+          <div className="mt-5 flex flex-col gap-2">
+            <Button
+              className="h-11 w-full gap-2 rounded-xl"
+              onClick={() => navigate(redirect)}
+            >
+              ادامه <ArrowLeft className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 w-full gap-2 rounded-xl"
+              onClick={() => void signOut()}
+            >
+              <LogOut className="size-4" /> خروج از حساب
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-[calc(100vh-11rem)] items-center justify-center px-4 py-10">
       <div className="grid w-full max-w-5xl items-center gap-8 lg:grid-cols-2">
@@ -221,6 +251,16 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                       />
                     </div>
                   </div>
+                  <p className="text-center text-xs text-muted-foreground">
+                    اسمت اینجا نیست؟{" "}
+                    <button
+                      type="button"
+                      className="font-bold text-primary hover:underline"
+                      onClick={() => switchMode("register")}
+                    >
+                      ثبت‌نام کن
+                    </button>
+                  </p>
                   <Button
                     type="submit"
                     className="h-11 w-full gap-2 rounded-xl"
@@ -236,13 +276,19 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                 </form>
               ) : (
                 <form onSubmit={handlePasswordStep} className="space-y-4">
-                  <div className="flex items-center justify-between rounded-xl bg-muted px-3 py-2 text-sm">
-                    <span className="truncate font-medium">{username}</span>
+                  <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm">
+                    <span className="flex min-w-0 items-center gap-2 font-bold text-emerald-800">
+                      <UserCheck className="size-4 shrink-0 text-emerald-600" />
+                      <span className="truncate">{username}</span>
+                      <span className="shrink-0 text-xs font-medium text-emerald-600">
+                        کاربر پیدا شد ✓
+                      </span>
+                    </span>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="gap-1 text-primary"
+                      className="gap-1 text-emerald-700 hover:text-emerald-900"
                       onClick={() => setStep("username")}
                     >
                       <Pencil className="size-3.5" /> تغییر
@@ -251,39 +297,31 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
 
                   <div className="space-y-2">
                     <Label htmlFor="login-password">رمز عبور (مرحله ۱)</Label>
-                    <div className="relative">
-                      <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="رمز عبور"
-                        className="h-11 rounded-xl ps-9"
-                        autoComplete="current-password"
-                        disabled={busy}
-                        autoFocus
-                      />
-                    </div>
+                    <PasswordInput
+                      id="login-password"
+                      value={password}
+                      onChange={setPassword}
+                      placeholder="رمز عبور"
+                      autoComplete="current-password"
+                      disabled={busy}
+                      autoFocus
+                      icon={Lock}
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="login-confirm">
                       رمز عبور (مرحله ۲ — تکرار)
                     </Label>
-                    <div className="relative">
-                      <KeyRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        id="login-confirm"
-                        type="password"
-                        value={confirm}
-                        onChange={(event) => setConfirm(event.target.value)}
-                        placeholder="دوباره همان رمز"
-                        className="h-11 rounded-xl ps-9"
-                        autoComplete="current-password"
-                        disabled={busy}
-                      />
-                    </div>
+                    <PasswordInput
+                      id="login-confirm"
+                      value={confirm}
+                      onChange={setConfirm}
+                      placeholder="دوباره همان رمز"
+                      autoComplete="current-password"
+                      disabled={busy}
+                      icon={KeyRound}
+                    />
                     <p className="text-xs text-muted-foreground">
                       🔒 برای امنیت بیشتر، رمز دو بار وارد می‌شود.
                     </p>
@@ -326,37 +364,27 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reg-password">رمز عبور (مرحله ۱)</Label>
-                  <div className="relative">
-                    <Lock className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
+                  <Label htmlFor="reg-password">رمز عبور (مرحله ۱)</Label>                    <PasswordInput
                       id="reg-password"
-                      type="password"
                       value={password}
-                      onChange={(event) => setPassword(event.target.value)}
+                      onChange={setPassword}
                       placeholder="حداقل ۶ کاراکتر"
-                      className="h-11 rounded-xl ps-9"
                       autoComplete="new-password"
                       disabled={busy}
+                      icon={Lock}
                     />
-                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reg-confirm">رمز عبور (مرحله ۲ — تکرار)</Label>
-                  <div className="relative">
-                    <KeyRound className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
+                  <Label htmlFor="reg-confirm">رمز عبور (مرحله ۲ — تکرار)</Label>                    <PasswordInput
                       id="reg-confirm"
-                      type="password"
                       value={confirm}
-                      onChange={(event) => setConfirm(event.target.value)}
+                      onChange={setConfirm}
                       placeholder="دوباره همان رمز"
-                      className="h-11 rounded-xl ps-9"
                       autoComplete="new-password"
                       disabled={busy}
+                      icon={KeyRound}
                     />
-                  </div>
                   <p className="text-xs text-muted-foreground">
                     🔒 رمز را دو بار وارد کنید تا مطمئن شوید درست است.
                   </p>
@@ -440,6 +468,55 @@ function Auth({ redirectAfterAuth = "/profile" }: AuthProps) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** فیلد رمز عبور با دکمه نمایش/پنهان کردن رمز 👁 */
+function PasswordInput({
+  id,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  disabled,
+  autoFocus,
+  icon: Icon = Lock,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  autoComplete?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+  icon?: typeof Lock;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Icon className="absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        id={id}
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-11 rounded-xl ps-9 pe-10"
+        autoComplete={autoComplete}
+        disabled={disabled}
+        autoFocus={autoFocus}
+      />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        title={visible ? "پنهان کردن رمز" : "نمایش رمز"}
+        aria-label={visible ? "پنهان کردن رمز" : "نمایش رمز"}
+        disabled={disabled}
+        className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+      </button>
     </div>
   );
 }

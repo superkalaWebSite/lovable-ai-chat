@@ -40,6 +40,9 @@ const schema = defineSchema(
       passwordHash: v.string(),
       role: v.union(v.literal("admin"), v.literal("user")),
       createdAt: v.number(),
+      // مجازات‌های مدیر (تا چه زمانی فعال است؛ 0 یا نداشتن = بدون مجازات)
+      supportBannedUntil: v.optional(v.number()),
+      discountBannedUntil: v.optional(v.number()),
     }).index("by_usernameLower", ["usernameLower"]),
 
     sessions: defineTable({
@@ -55,6 +58,7 @@ const schema = defineSchema(
       brand: v.string(),
       category: v.string(),
       emoji: v.string(),
+      image: v.optional(v.string()), // data-url عکس آپلود شده توسط مدیر
       price: v.number(),
       oldPrice: v.optional(v.number()),
       rating: v.number(),
@@ -90,7 +94,15 @@ const schema = defineSchema(
       text: v.string(),
       from: v.union(v.literal("user"), v.literal("admin")),
       createdAt: v.number(),
-    }).index("by_account", ["accountId"])
+    }).index("by_account", ["accountId"]),
+
+    reviews: defineTable({
+      accountId: v.optional(v.id("accounts")),
+      name: v.string(),
+      rating: v.number(),
+      text: v.string(),
+      createdAt: v.number(),
+    }).index("by_createdAt", ["createdAt"])
   },
   {
     schemaValidation: false,

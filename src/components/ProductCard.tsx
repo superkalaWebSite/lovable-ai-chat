@@ -30,9 +30,17 @@ export function ProductCard({
         <div
           className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${categoryTile(product.category)}`}
         >
-          <span className="text-6xl transition-transform duration-300 group-hover:scale-110">
-            {product.emoji}
-          </span>
+          {product.image ? (
+            <img
+              src={product.image}
+              alt={product.title}
+              className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
+            />
+          ) : (
+            <span className="text-6xl transition-transform duration-300 group-hover:scale-110">
+              {product.emoji}
+            </span>
+          )}
           {off > 0 && (
             <span className="absolute top-3 start-3 rounded-full bg-primary px-2 py-0.5 text-xs font-black text-primary-foreground shadow">
               {off.toLocaleString("fa-IR")}٪ تخفیف

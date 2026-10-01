@@ -6,14 +6,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATEGORIES, discountPercent, formatPrice } from "@/lib/shop";
+import { CATEGORIES, discountPercent, formatDate, formatPrice } from "@/lib/shop";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
   BadgeCheck,
+  ChevronDown,
   CreditCard,
   Headphones,
+  MessageSquare,
   Search,
   ShieldCheck,
   Star,
@@ -21,27 +23,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-
-const TESTIMONIALS = [
-  {
-    name: "سارا محمدی",
-    initial: "س",
-    text: "سفارشم دو روزه به دستم رسید، بسته‌بندی عالی بود و جواب چت پشتیبانی هم سریع بود. واقعاً مثل دیجی‌کالا حس حرفه‌ای داره!",
-    rating: 5,
-  },
-  {
-    name: "علی رضایی",
-    initial: "ع",
-    text: "قیمت‌ها نسبت به بقیه جاها پایین‌تر بود و ضمانت اصالت کالا هم داشت. برای خرید لپتاپ تردید داشتم ولی عالی بود.",
-    rating: 5,
-  },
-  {
-    name: "مریم احمدی",
-    initial: "م",
-    text: "ثبت‌نام بدون ایمیل خیلی ساده بود، با نام کاربری و رمز وارد شدم و کل سفارش‌هام توی پروفایلم ذخیره شد.",
-    rating: 4,
-  },
-];
 
 const FEATURES = [
   {
@@ -77,6 +58,7 @@ function fadeUp(delay = 0) {
 
 export default function Landing() {
   const products = useQuery(api.products.list);
+  const reviews = useQuery(api.reviews.list);
   const navigate = useNavigate();
   const [term, setTerm] = useState("");
   const [selected, setSelected] = useState<Doc<"products"> | null>(null);
@@ -84,6 +66,8 @@ export default function Landing() {
   const all = products ?? [];
   const featured = [...all].sort((a, b) => b.rating - a.rating).slice(0, 8);
   const deals = all.filter((p) => p.oldPrice !== undefined).slice(0, 4);
+  // حداکثر ۳ نظر در صفحه اصلی
+  const shownReviews = (reviews ?? []).slice(0, 3);
 
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -92,7 +76,7 @@ export default function Landing() {
   };
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
       {/* ───────────── هیرو ───────────── */}
       <section className="relative">
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/8 via-transparent to-transparent" />
@@ -173,8 +157,6 @@ export default function Landing() {
           >
             <div className="grid grid-cols-2 gap-4">
               <motion.div
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                 className="flex aspect-square flex-col justify-between rounded-3xl bg-gradient-to-br from-sky-100 to-blue-200 p-5"
               >
                 <span className="text-xs font-bold text-sky-700">موبایل</span>
@@ -185,8 +167,6 @@ export default function Landing() {
               </motion.div>
 
               <motion.div
-                animate={{ y: [0, 12, 0] }}
-                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
                 className="mt-8 flex aspect-square flex-col justify-between rounded-3xl bg-gradient-to-br from-indigo-100 to-violet-200 p-5"
               >
                 <span className="text-xs font-bold text-indigo-700">لپتاپ</span>
@@ -197,8 +177,6 @@ export default function Landing() {
               </motion.div>
 
               <motion.div
-                animate={{ y: [0, 10, 0] }}
-                transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
                 className="flex aspect-square flex-col justify-between rounded-3xl bg-gradient-to-br from-amber-100 to-orange-200 p-5"
               >
                 <span className="text-xs font-bold text-amber-700">لوازم جانبی</span>
@@ -209,8 +187,6 @@ export default function Landing() {
               </motion.div>
 
               <motion.div
-                animate={{ y: [0, -12, 0] }}
-                transition={{ duration: 6.5, repeat: Infinity, ease: "easeInOut" }}
                 className="mt-8 flex aspect-square flex-col justify-between rounded-3xl bg-gradient-to-br from-emerald-100 to-teal-200 p-5"
               >
                 <span className="text-xs font-bold text-emerald-700">خانه</span>
@@ -387,83 +363,86 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ───────────── نظرات مشتری‌ها ───────────── */}
+      {/* ───────────── نظرات کاربران (حداکثر ۳) ───────────── */}
       <section className="mx-auto mt-16 max-w-7xl px-4">
-        <div className="mb-6 text-center">
-          <h2 className="text-2xl font-black sm:text-3xl">
-            مشتری‌ها درباره سوپر کالا چی می‌گن؟
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            بیش از ۲۰۰ هزار سفارش موفق در سراسر کشور
-          </p>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-3">
-          {TESTIMONIALS.map((item, index) => (
-            <motion.figure
-              key={item.name}
-              {...fadeUp(index * 0.1)}
-              className="rounded-2xl border border-border/70 bg-card p-6"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-lg font-black text-primary">
-                  {item.initial}
-                </span>
-                <figcaption>
-                  <p className="text-sm font-black">{item.name}</p>
-                  <div className="mt-0.5 flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, starIndex) => (
-                      <Star
-                        key={starIndex}
-                        className={`size-3.5 ${
-                          starIndex < item.rating
-                            ? "fill-amber-400 text-amber-400"
-                            : "text-muted-foreground/40"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                </figcaption>
-              </div>
-              <blockquote className="mt-4 text-sm leading-7 text-muted-foreground">
-                «{item.text}»
-              </blockquote>
-            </motion.figure>
-          ))}
-        </div>
-      </section>
-
-      {/* ───────────── دعوت به ثبت‌نام ───────────── */}
-      <section className="mx-auto mt-16 max-w-7xl px-4">
-        <motion.div
-          {...fadeUp()}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-l from-primary via-emerald-600 to-teal-600 px-6 py-12 text-center text-white sm:px-12"
-        >
-          <div className="pointer-events-none absolute -start-10 -top-10 size-48 rounded-full bg-white/10" />
-          <div className="pointer-events-none absolute -bottom-14 -end-6 size-56 rounded-full bg-black/10" />
-          <h2 className="relative text-2xl font-black sm:text-4xl">
-            همین الان عضو سوپر کالا شو 🛍️
-          </h2>
-          <p className="relative mx-auto mt-3 max-w-xl text-sm leading-7 text-white/85">
-            ثبت‌نام بدون ایمیل؛ فقط یک نام کاربری و رمز عبور دو مرحله‌ای. بعدش
-            سبد خرید، پروفایل، سفارش‌ها و گپ پشتیبانی در اختیارته.
-          </p>
-          <div className="relative mt-7 flex flex-wrap justify-center gap-3">
-            <Button size="lg" className="h-12 gap-2 rounded-2xl bg-white px-8 text-green-700 hover:bg-white/90" asChild>
-              <Link to="/auth">
-                ساخت حساب رایگان <ArrowLeft className="size-4" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-2xl border-white/40 px-8 text-white hover:bg-white/10 hover:text-white"
-              asChild
-            >
-              <Link to="/shop">گشت‌وگذار در فروشگاه</Link>
-            </Button>
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-black sm:text-3xl">
+              نظرات کاربران درباره سوپر کالا
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              تجربه واقعی مشتری‌ها — بیش از ۲۰۰ هزار سفارش موفق
+            </p>
           </div>
-        </motion.div>
+          <Button variant="ghost" className="gap-1" asChild>
+            <Link to="/reviews">
+              همه نظرات <ArrowLeft className="size-4" />
+            </Link>
+          </Button>
+        </div>
+
+        {reviews === undefined ? (
+          <div className="grid gap-4 md:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-44 rounded-2xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-3">
+            {shownReviews.map((review, index) => (
+              <motion.figure
+                key={review._id}
+                {...fadeUp(index * 0.1)}
+                className="flex flex-col rounded-2xl border border-border/70 bg-card p-6"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-lg font-black text-primary">
+                    {review.name.slice(0, 1)}
+                  </span>
+                  <figcaption>
+                    <p className="text-sm font-black">{review.name}</p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                      <div className="flex gap-0.5">
+                        {Array.from({ length: 5 }).map((_, starIndex) => (
+                          <Star
+                            key={starIndex}
+                            className={`size-3.5 ${
+                              starIndex < review.rating
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-muted-foreground/40"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {formatDate(review.createdAt)}
+                      </span>
+                    </div>
+                  </figcaption>
+                </div>
+                <blockquote className="mt-4 text-sm leading-7 text-muted-foreground">
+                  «{review.text}»
+                </blockquote>
+              </motion.figure>
+            ))}
+          </div>
+        )}
+
+        {/* آیکون «بیشتر» زیر نظرات برای رفتن به صفحه همه نظرات */}
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="outline"
+            className="group gap-2 rounded-full border-border/70 px-6"
+            asChild
+            title="دیدن نظرات بیشتر"
+          >
+            <Link to="/reviews">
+              <MessageSquare className="size-4 text-primary" />
+              نظرات بیشتر
+              <ChevronDown className="size-4 transition-transform group-hover:translate-y-0.5" />
+            </Link>
+          </Button>
+        </div>
       </section>
 
       <ProductDialog product={selected} onClose={() => setSelected(null)} />

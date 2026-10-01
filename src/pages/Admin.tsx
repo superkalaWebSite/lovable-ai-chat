@@ -1,5 +1,5 @@
 import { api } from "@/convex/_generated/api";
-import type { Doc } from "@/convex/_generated/dataModel";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,10 +35,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { friendlyError } from "@/lib/crypto";
-import { CATEGORIES, categoryTile, formatPrice, formatTime } from "@/lib/shop";
+import { fileToDataUrl } from "@/lib/image";
+import {
+  CATEGORIES,
+  categoryTile,
+  formatDate,
+  formatPrice,
+  formatTime,
+} from "@/lib/shop";
 import { useMutation, useQuery } from "convex/react";
 import {
   AlertTriangle,
+  ArrowLeft,
   Loader2,
   MessageCircle,
   Package,
@@ -48,6 +56,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Trash2,
+  Upload,
   Users,
   Wallet,
 } from "lucide-react";
@@ -68,18 +77,33 @@ export default function AdminPage() {
     api.support.adminInbox,
     token && isAdmin ? { token } : "skip",
   );
+  const orders = useQuery(
+    api.stats.adminOrders,
+    token && isAdmin ? { token } : "skip",
+  );
+  const users = useQuery(
+    api.punishments.listUsers,
+    token && isAdmin ? { token } : "skip",
+  );
 
   const addMutation = useMutation(api.products.add);
   const updateMutation = useMutation(api.products.update);
   const removeMutation = useMutation(api.products.remove);
   const replyMutation = useMutation(api.support.adminReply);
+  const setStatusMutation = useMutation(api.stats.setOrderStatus);
+  const supportBanMutation = useMutation(api.punishments.setSupportBan);
+  const discountBanMutation = useMutation(api.punishments.setDiscountBan);
 
+  const [tab, setTab] = useState("stats");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [busy, setBusy] = useState(false);
   const [activeUser, setActiveUser] = useState<string | null>(null);
   const [reply, setReply] = useState("");
+  const [image, setImage] = useState<string | undefined>(undefined);
+  const [imageBusy, setImageBusy] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   type InboxItem = NonNullable<typeof inbox>[number];
   const threads = useMemo(() => {
@@ -140,12 +164,76 @@ export default function AdminPage() {
 
   const openNewProduct = () => {
     setEditing(null);
+    setImage(undefined);
+    setImageError(null);
     setFormOpen(true);
   };
 
   const openEditProduct = (product: Product) => {
     setEditing(product);
+    setImage(product.image);
+    setImageError(null);
     setFormOpen(true);
+  };
+
+  const onPickImage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImageBusy(true);
+    setImageError(null);
+    try {
+      setImage(await fileToDataUrl(file));
+    } catch (error) {
+      setImageError(friendlyError(error));
+    } finally {
+      setImageBusy(false);
+    }
+  };
+
+  const ORDER_STATUSES = [
+    "در حال پردازش",
+    "ارسال شده",
+    "تحویل داده شده",
+    "لغو شده",
+  ];
+
+  const changeStatus = async (orderId: Id<"orders">, status: string) => {
+    try {
+      await setStatusMutation({ token, orderId, status });
+      toast.success("وضعیت سفارش به‌روز شد 🚚");
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  const applyBan = async (
+    kind: "support" | "discount",
+    accountId: Id<"accounts">,
+    days: number,
+  ) => {
+    try {
+      if (kind === "support") {
+        await supportBanMutation({ token, accountId, days });
+      } else {
+        await discountBanMutation({ token, accountId, days });
+      }
+      toast.success(
+        days > 0
+          ? `مجازات ${days.toLocaleString("fa-IR")} روزه اعمال شد ⚖️`
+          : "مجازات برداشته شد ✅",
+      );
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  const remainLabel = (until: number) => {
+    const hours = Math.max(1, Math.ceil((until - Date.now()) / 3600000));
+    if (hours >= 24) {
+      return `${Math.ceil(hours / 24).toLocaleString("fa-IR")} روز`;
+    }
+    return `${hours.toLocaleString("fa-IR")} ساعت`;
   };
 
   const submitProduct = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -176,6 +264,7 @@ export default function AdminPage() {
       brand: String(data.get("brand") ?? "").trim() || "سوپر کالا",
       category: String(data.get("category") ?? CATEGORIES[0].name),
       emoji: String(data.get("emoji") ?? "").trim() || "🛍️",
+      image: image || undefined,
       price,
       oldPrice: oldPriceRaw ? Number(oldPriceRaw) : undefined,
       rating: Math.min(5, Math.max(0, Number(data.get("rating")) || 4.5)),
@@ -236,24 +325,34 @@ export default function AdminPage() {
     }
   };
 
-  const statCards = [
+  const statCards: {
+    label: string;
+    value: number | string;
+    suffix?: string;
+    icon: typeof Package;
+    tone: string;
+    target: string;
+  }[] = [
     {
       label: "تعداد محصولات",
       value: stats?.products ?? 0,
       icon: Package,
       tone: "bg-sky-100 text-sky-700",
+      target: "products",
     },
     {
       label: "کاربران ثبت‌نام شده",
       value: stats?.users ?? 0,
       icon: Users,
       tone: "bg-emerald-100 text-emerald-700",
+      target: "punish",
     },
     {
       label: "سفارش‌ها",
       value: stats?.orders ?? 0,
       icon: ShoppingCart,
       tone: "bg-violet-100 text-violet-700",
+      target: "orders",
     },
     {
       label: "درآمد کل",
@@ -261,18 +360,21 @@ export default function AdminPage() {
       suffix: "تومان",
       icon: Wallet,
       tone: "bg-cyan-100 text-cyan-700",
+      target: "orders",
     },
     {
       label: "پیام‌های پشتیبانی",
       value: stats?.messages ?? 0,
       icon: MessageCircle,
       tone: "bg-teal-100 text-teal-700",
+      target: "chat",
     },
     {
       label: "کالای کم‌موجود (≤۵)",
       value: stats?.lowStock ?? 0,
       icon: AlertTriangle,
       tone: "bg-amber-100 text-amber-700",
+      target: "products",
     },
   ];
 
@@ -294,15 +396,15 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="stats" className="gap-6">
-        <TabsList className="rounded-full">
+      <Tabs value={tab} onValueChange={setTab} className="gap-6">
+        <TabsList className="w-full justify-start gap-1 overflow-x-auto rounded-full md:justify-center">
           <TabsTrigger value="stats" className="rounded-full">
             📊 آمار سایت
           </TabsTrigger>
           <TabsTrigger value="products" className="rounded-full">
             📦 کنترل کالاها
           </TabsTrigger>
-          <TabsTrigger value="chat" className="rounded-full">
+          <TabsTrigger value="chat" className="shrink-0 rounded-full">
             💬 گپ کاربران
             {waitingCount > 0 && (
               <span
@@ -313,23 +415,37 @@ export default function AdminPage() {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="orders" className="shrink-0 rounded-full">
+            🚚 سفارش‌ها
+          </TabsTrigger>
+          <TabsTrigger value="punish" className="shrink-0 rounded-full">
+            ⚖️ مجازات
+          </TabsTrigger>
         </TabsList>
 
         {/* ───── آمار ───── */}
         <TabsContent value="stats" className="mt-6 space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {statCards.map((card) => (
-              <Card key={card.label} className="rounded-2xl border-border/70 shadow-sm">
-                <CardContent className="flex items-center gap-4 p-5">
+              <button
+                key={card.label}
+                type="button"
+                onClick={() => setTab(card.target)}
+                title={`رفتن به ${card.label}`}
+                className="group rounded-2xl border border-border/70 bg-card text-start shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+              >
+                <div className="flex items-center gap-4 p-5">
                   <span
-                    className={`flex size-12 items-center justify-center rounded-2xl ${card.tone}`}
+                    className={`flex size-12 shrink-0 items-center justify-center rounded-2xl ${card.tone}`}
                   >
                     <card.icon className="size-5" />
                   </span>
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs text-muted-foreground">{card.label}</p>
                     <p className="text-xl font-black">
-                      {card.value.toLocaleString("fa-IR")}
+                      {typeof card.value === "number"
+                        ? card.value.toLocaleString("fa-IR")
+                        : card.value}
                       {card.suffix && (
                         <span className="ms-1 text-xs font-bold text-muted-foreground">
                           {card.suffix}
@@ -337,8 +453,9 @@ export default function AdminPage() {
                       )}
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                  <ArrowLeft className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-x-1" />
+                </div>
+              </button>
             ))}
           </div>
 
@@ -395,11 +512,19 @@ export default function AdminPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <span
-                              className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-xl ${categoryTile(
+                              className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br text-xl ${categoryTile(
                                 product.category,
                               )}`}
                             >
-                              {product.emoji}
+                              {product.image ? (
+                                <img
+                                  src={product.image}
+                                  alt=""
+                                  className="size-full object-cover"
+                                />
+                              ) : (
+                                product.emoji
+                              )}
                             </span>
                             <span className="min-w-0">
                               <span className="block max-w-64 truncate text-sm font-bold">
@@ -586,6 +711,226 @@ export default function AdminPage() {
             </div>
           )}
         </TabsContent>
+
+        {/* ───── سفارش‌ها ───── */}
+        <TabsContent value="orders" className="mt-6">
+          <Card className="overflow-hidden rounded-2xl border-border/70 shadow-sm">
+            <div className="border-b border-border/60 bg-muted/50 px-5 py-3 text-sm font-black">
+              همه سفارش‌ها ({(orders ?? []).length.toLocaleString("fa-IR")})
+            </div>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>سفارش</TableHead>
+                    <TableHead>کاربر</TableHead>
+                    <TableHead>اقلام</TableHead>
+                    <TableHead>مجموع</TableHead>
+                    <TableHead>تاریخ</TableHead>
+                    <TableHead>وضعیت</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders === undefined ? (
+                    <TableRow>
+                      <TableCell colSpan={6}>
+                        <Skeleton className="h-12 rounded-xl" />
+                      </TableCell>
+                    </TableRow>
+                  ) : orders.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-12 text-center">
+                        هنوز سفارشی ثبت نشده است.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    orders.map((order) => (
+                      <TableRow key={order._id}>
+                        <TableCell className="font-mono text-xs">
+                          #{order._id.slice(-6).toUpperCase()}
+                        </TableCell>
+                        <TableCell className="text-sm font-bold">
+                          {order.username}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {order.items.length.toLocaleString("fa-IR")} قلم
+                        </TableCell>
+                        <TableCell className="text-sm font-bold">
+                          {formatPrice(order.total)} تومان
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {formatDate(order.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <select
+                            value={order.status}
+                            onChange={(event) =>
+                              void changeStatus(order._id, event.target.value)
+                            }
+                            className="h-9 rounded-lg border border-input bg-background px-2 text-sm"
+                          >
+                            {ORDER_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* ───── مجازات ───── */}
+        <TabsContent value="punish" className="mt-6">
+          <div className="mb-4 rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-xs leading-6 text-muted-foreground">
+            ⚖️ برای کاربرانی که به پشتیبانی بی‌احترامی کرده‌اند مجازات ثبت کنید:{" "}
+            <b className="text-foreground">مسدودی گپ</b> (دیگر نتواند پیام
+            بدهد) یا <b className="text-foreground">غیرفعالی تخفیف</b> (تا
+            مدت تعیین شده تخفیف نگیرد).
+          </div>
+
+          {users === undefined ? (
+            <Skeleton className="h-40 rounded-2xl" />
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 py-16 text-center">
+              <span className="text-5xl">👥</span>
+              <h3 className="mt-3 font-black">هنوز کاربری ثبت‌نام نکرده</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                وقتی کاربران عضو شوند، اینجا می‌توانید مدیریتشان کنید.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {users.map((account) => (
+                <Card
+                  key={account._id}
+                  className="rounded-2xl border-border/70 shadow-sm"
+                >
+                  <CardContent className="flex flex-col gap-4 p-4 lg:flex-row lg:items-center">
+                    <div className="flex min-w-52 items-center gap-3">
+                      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-black text-white">
+                        {account.username.slice(0, 1)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black">
+                          {account.username}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          عضویت {formatDate(account.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 space-y-2.5">
+                      {/* مجازات گپ */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span
+                          className={`rounded-full px-2.5 py-1 font-bold ${
+                            account.supportBanned
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {account.supportBanned
+                            ? `⛔ گپ بسته تا ${remainLabel(
+                                account.supportBannedUntil,
+                              )}`
+                            : "✅ گپ باز"}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("support", account._id, 1)
+                            }
+                          >
+                            ۱ روز گپ
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("support", account._id, 3)
+                            }
+                          >
+                            ۳ روز گپ
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
+                            onClick={() =>
+                              void applyBan("support", account._id, 0)
+                            }
+                          >
+                            رفع
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* مجازات تخفیف */}
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <span
+                          className={`rounded-full px-2.5 py-1 font-bold ${
+                            account.discountBanned
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}
+                        >
+                          {account.discountBanned
+                            ? `⛔ تخفیف غیرفعال تا ${remainLabel(
+                                account.discountBannedUntil,
+                              )}`
+                            : "✅ تخفیف فعال"}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("discount", account._id, 1)
+                            }
+                          >
+                            ۱ روز تخفیف
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs"
+                            onClick={() =>
+                              void applyBan("discount", account._id, 3)
+                            }
+                          >
+                            ۳ روز تخفیف
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
+                            onClick={() =>
+                              void applyBan("discount", account._id, 0)
+                            }
+                          >
+                            رفع
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
       </Tabs>
 
       {/* ───── دیالوگ افزودن/ویرایش ───── */}
@@ -711,6 +1056,59 @@ export default function AdminPage() {
                   defaultValue={editing?.badge}
                   placeholder="پرفروش / جدید / تخفیف ویژه"
                 />
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label>عکس محصول</Label>
+                <div className="flex items-center gap-4">
+                  <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-muted text-3xl">
+                    {image ? (
+                      <img
+                        src={image}
+                        alt="پیش‌نمایش عکس محصول"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <span>{editing?.emoji ?? "🛍️"}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-start gap-2">
+                    <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-xs transition-colors hover:bg-accent">
+                      <Upload className="size-4" />
+                      {image ? "تغییر عکس" : "آپلود عکس"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(event) => void onPickImage(event)}
+                        disabled={imageBusy}
+                      />
+                    </label>
+                    {image && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs text-destructive hover:text-destructive"
+                        onClick={() => setImage(undefined)}
+                      >
+                        <Trash2 className="size-3.5" /> حذف عکس
+                      </Button>
+                    )}
+                    {imageBusy && (
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Loader2 className="size-3.5 animate-spin" /> در حال
+                        پردازش عکس...
+                      </p>
+                    )}
+                    {imageError && (
+                      <p className="text-xs text-destructive">{imageError}</p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  حداکثر ۸ مگابایت — عکس خودکار کوچک و فشرده می‌شود.
+                </p>
               </div>
 
               <div className="space-y-2 sm:col-span-2">

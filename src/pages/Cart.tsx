@@ -25,7 +25,7 @@ const FREE_SHIPPING_FROM = 500000;
 const SHIPPING_COST = 59000;
 
 export default function CartPage() {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
   const cart = useQuery(api.cart.myCart, token && isAuthenticated ? { token } : "skip");
   const setQtyMutation = useMutation(api.cart.setQty);
   const removeMutation = useMutation(api.cart.remove);
@@ -34,8 +34,9 @@ export default function CartPage() {
   const [busy, setBusy] = useState(false);
 
   const items = cart ?? [];
+  const discountBanned = (user?.discountBannedUntil ?? 0) > Date.now();
   const total = items.reduce(
-    (sum, item) => sum + item.product.price * item.qty,
+    (sum, item) => sum + item.unitPrice * item.qty,
     0,
   );
   const shipping =
@@ -90,6 +91,13 @@ export default function CartPage() {
         </div>
       </div>
 
+      {discountBanned && (
+        <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-900">
+          ⚠️ به دلیل مجازات، تخفیف‌ها فعلاً برای حساب شما غیرفعال است و کالاها
+          با قیمت بدون تخفیف محاسبه می‌شوند.
+        </div>
+      )}
+
       {cart === undefined ? (
         <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
           <div className="space-y-3">
@@ -122,11 +130,19 @@ export default function CartPage() {
                 className="flex flex-wrap items-center gap-4 rounded-2xl border border-border/70 bg-card p-4 shadow-sm"
               >
                 <div
-                  className={`flex size-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-3xl ${categoryTile(
+                  className={`relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br text-3xl ${categoryTile(
                     item.product.category,
                   )}`}
                 >
-                  {item.product.emoji}
+                  {item.product.image ? (
+                    <img
+                      src={item.product.image}
+                      alt={item.product.title}
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    item.product.emoji
+                  )}
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -137,8 +153,13 @@ export default function CartPage() {
                     {item.product.title}
                   </Link>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {item.product.brand} — {formatPrice(item.product.price)} تومان
+                    {item.product.brand} — {formatPrice(item.unitPrice)} تومان
                     برای هر عدد
+                    {item.unitPrice !== item.product.price && (
+                      <span className="ms-1 line-through">
+                        {formatPrice(item.product.price)}
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -165,7 +186,7 @@ export default function CartPage() {
                 </div>
 
                 <div className="w-32 text-left font-black text-primary">
-                  {formatPrice(item.product.price * item.qty)}
+                  {formatPrice(item.unitPrice * item.qty)}
                   <span className="ms-1 text-xs font-bold">تومان</span>
                 </div>
 

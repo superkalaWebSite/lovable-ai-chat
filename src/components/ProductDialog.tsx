@@ -40,9 +40,17 @@ export function ProductDialog({
 
             <div className="grid gap-5 sm:grid-cols-2">
               <div
-                className={`flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br ${categoryTile(product.category)}`}
+                className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${categoryTile(product.category)}`}
               >
-                <span className="text-8xl">{product.emoji}</span>
+                {product.image ? (
+                  <img
+                    src={product.image}
+                    alt={product.title}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  <span className="text-8xl">{product.emoji}</span>
+                )}
               </div>
 
               <div className="flex flex-col gap-3">

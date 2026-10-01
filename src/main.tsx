@@ -19,6 +19,7 @@ const Shop = lazy(() => import("./pages/Shop.tsx"));
 const CartPage = lazy(() => import("./pages/Cart.tsx"));
 const Profile = lazy(() => import("./pages/Profile.tsx"));
 const Support = lazy(() => import("./pages/Support.tsx"));
+const Reviews = lazy(() => import("./pages/Reviews.tsx"));
 const Admin = lazy(() => import("./pages/Admin.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -129,6 +130,7 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/shop" element={<Shop />} />
+              <Route path="/reviews" element={<Reviews />} />
               <Route
                 path="/auth"
                 element={<AuthPage redirectAfterAuth="/profile" />}

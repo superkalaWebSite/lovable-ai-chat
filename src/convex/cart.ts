@@ -8,6 +8,8 @@ export const myCart = query({
   handler: async (ctx, { token }) => {
     const account = await accountFromToken(ctx, token);
     if (!account) return null;
+    // اگر تخفیف حساب کاربر مسدود شده باشد، قیمت بدون تخفیف اعمال می‌شود
+    const discountBanned = (account.discountBannedUntil ?? 0) > Date.now();
     const items = await ctx.db
       .query("cartItems")
       .withIndex("by_account", (q) => q.eq("accountId", account._id))
@@ -16,7 +18,11 @@ export const myCart = query({
     for (const item of items) {
       const product = await ctx.db.get(item.productId);
       if (!product) continue;
-      result.push({ _id: item._id, qty: item.qty, product });
+      const unitPrice =
+        discountBanned && product.oldPrice !== undefined
+          ? product.oldPrice
+          : product.price;
+      result.push({ _id: item._id, qty: item.qty, product, unitPrice });
     }
     return result;
   },
@@ -90,19 +96,24 @@ export const checkout = mutation({
       .collect();
     if (items.length === 0) throw new Error("سبد خرید شما خالی است.");
 
+    const discountBanned = (account.discountBannedUntil ?? 0) > Date.now();
     const orderItems = [];
     let total = 0;
     for (const item of items) {
       const product = await ctx.db.get(item.productId);
       if (!product) continue;
+      const unitPrice =
+        discountBanned && product.oldPrice !== undefined
+          ? product.oldPrice
+          : product.price;
       orderItems.push({
         productId: product._id,
         title: product.title,
         emoji: product.emoji,
-        price: product.price,
+        price: unitPrice,
         qty: item.qty,
       });
-      total += product.price * item.qty;
+      total += unitPrice * item.qty;
       await ctx.db.patch(product._id, {
         stock: Math.max(0, product.stock - item.qty),
       });

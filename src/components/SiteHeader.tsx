@@ -14,7 +14,7 @@ import { getSupportSeenAt, subscribeSupportSeen } from "@/lib/support-seen";
 import { CATEGORIES } from "@/lib/shop";
 import { useQuery } from "convex/react";
 import { LifeBuoy, LogOut, Search, ShieldCheck, ShoppingCart, UserRound } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   Link,
   NavLink,
@@ -30,6 +30,20 @@ export function SiteHeader() {
     api.support.myThread,
     token && isAuthenticated ? { token } : "skip",
   );
+  const inbox = useQuery(
+    api.support.adminInbox,
+    token && isAdmin ? { token } : "skip",
+  );
+  // تعداد گپ‌های کاربران که هنوز جواب داده نشده (نشان اعلان پنل مدیر)
+  const waitingChats = useMemo(() => {
+    if (!inbox) return 0;
+    const last = new Map<string, (typeof inbox)[number]>();
+    for (const message of inbox) {
+      last.set(message.accountId as string, message);
+    }
+    return [...last.values()].filter((message) => message.from === "user")
+      .length;
+  }, [inbox]);
   const seenAt = useSyncExternalStore(
     subscribeSupportSeen,
     getSupportSeenAt,
@@ -59,7 +73,7 @@ export function SiteHeader() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/70 bg-card/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-border/70 bg-card">
       {/* نوار اطلاعات بالا */}
       <div className="bg-foreground text-white/90">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-1.5 text-[11px] sm:text-xs">
@@ -171,6 +185,11 @@ export function SiteHeader() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem className="cursor-pointer" onClick={() => navigate("/admin")}>
                       <ShieldCheck className="me-2 size-4" /> پنل کنترل سایت
+                      {waitingChats > 0 && (
+                        <span className="ms-auto flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground">
+                          {waitingChats.toLocaleString("fa-IR")}
+                        </span>
+                      )}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -226,12 +245,20 @@ export function SiteHeader() {
             پشتیبانی
           </NavLink>
           {isAdmin && (
-            <NavLink
+            <Link
               to="/admin"
               className="ms-auto inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-primary transition-colors hover:bg-muted"
             >
               <ShieldCheck className="size-4" /> پنل کنترل سایت
-            </NavLink>
+              {waitingChats > 0 && (
+                <span
+                  title={`${waitingChats.toLocaleString("fa-IR")} گپ بی‌جواب`}
+                  className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black text-primary-foreground"
+                >
+                  {waitingChats.toLocaleString("fa-IR")}
+                </span>
+              )}
+            </Link>
           )}
         </div>
       </nav>

@@ -13,11 +13,18 @@ function cleanText(text: string): string {
   return clean;
 }
 
-/** ارسال پیام کاربر به پشتیبانی */
+/** ارسال پیام کاربر به پشتیبانی (با بررسی مجازات مدیر) */
 export const send = mutation({
   args: { token: v.string(), text: v.string() },
   handler: async (ctx, { token, text }) => {
     const account = await requireAccount(ctx, token);
+    const bannedUntil = account.supportBannedUntil ?? 0;
+    if (bannedUntil > Date.now()) {
+      const hours = Math.max(1, Math.ceil((bannedUntil - Date.now()) / 3600000));
+      throw new Error(
+        `به دلیل نقض قوانین، دسترسی شما به گپ پشتیبانی تا ${hours.toLocaleString("fa-IR")} ساعت دیگر بسته است.`,
+      );
+    }
     await ctx.db.insert("supportMessages", {
       accountId: account._id,
       text: cleanText(text),

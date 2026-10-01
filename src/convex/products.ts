@@ -7,6 +7,7 @@ const productArgs = {
   brand: v.string(),
   category: v.string(),
   emoji: v.string(),
+  image: v.optional(v.string()),
   price: v.number(),
   oldPrice: v.optional(v.number()),
   rating: v.number(),

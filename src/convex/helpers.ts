@@ -50,6 +50,8 @@ export function publicAccount(account: Doc<"accounts">) {
     username: account.username,
     role: account.role,
     createdAt: account.createdAt,
+    supportBannedUntil: account.supportBannedUntil ?? 0,
+    discountBannedUntil: account.discountBannedUntil ?? 0,
   };
 }
 

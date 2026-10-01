@@ -17,6 +17,7 @@ export function BootstrapSeeds() {
       try {
         await convex.mutation(api.accounts.seedAdmin, {});
         await convex.mutation(api.products.seedIfEmpty, {});
+        await convex.mutation(api.reviews.seedIfEmpty, {});
       } catch (error) {
         console.warn("seed:", error);
       }

@@ -27,6 +27,12 @@ export default function SupportPage() {
   const [busy, setBusy] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
+  const bannedUntil = user?.supportBannedUntil ?? 0;
+  const banned = bannedUntil > Date.now();
+  const bannedHours = banned
+    ? Math.max(1, Math.ceil((bannedUntil - Date.now()) / 3600000))
+    : 0;
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages?.length]);
@@ -65,6 +71,13 @@ export default function SupportPage() {
           </p>
         </div>
       </div>
+
+      {banned && (
+        <div className="mb-3 flex items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-900">
+          ⛔ دسترسی شما به گپ پشتیبانی به دلیل نقض قوانین تا حدود{' '}
+          <b>{bannedHours.toLocaleString("fa-IR")} ساعت</b> دیگر بسته است.
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-md">
         {/* سربرگ گپ */}
@@ -118,7 +131,7 @@ export default function SupportPage() {
         </div>
 
         {/* پیشنهادهای سریع */}
-        {messages !== undefined && messages.length === 0 && (
+        {!banned && messages !== undefined && messages.length === 0 && (
           <div className="flex flex-wrap gap-2 border-t border-border/60 px-4 pt-3">
             {QUICK_QUESTIONS.map((question) => (
               <button
@@ -139,17 +152,21 @@ export default function SupportPage() {
             value={text}
             onChange={(event) => setText(event.target.value)}
             placeholder={
-              user ? "پیام خود را بنویسید..." : "برای نوشتن پیام وارد شوید"
+              banned
+                ? "دسترسی شما به گپ مسدود است"
+                : user
+                  ? "پیام خود را بنویسید..."
+                  : "برای نوشتن پیام وارد شوید"
             }
             className="h-11 rounded-xl"
             maxLength={1000}
-            disabled={busy}
+            disabled={busy || banned}
           />
           <Button
             type="submit"
             size="icon"
             className="size-11 shrink-0 rounded-xl"
-            disabled={busy || !text.trim()}
+            disabled={busy || banned || !text.trim()}
           >
             {busy ? (
               <Loader2 className="size-4 animate-spin" />

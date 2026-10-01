@@ -88,9 +88,8 @@ export function useAuth() {
     isAuthenticated: !!user,
     // «ادمین» و «شریک مدیر» هر دو به پنل کنترل سایت دسترسی کامل دارند
     isAdmin: user?.role === "admin" || user?.role === "partner",
-    // فقط پشتیبانی و مدیران اجازه لایک کردن نظر کاربران را دارند
-    canLike:
-      !!user && ["admin", "partner", "supervisor"].includes(user.role),
+    // همه کاربران واردشده می‌توانند نظرها را لایک کنند
+    canLike: !!user,
     roleLabel: user ? roleInfo(user.role).label : "",
     signUp,
     signIn,

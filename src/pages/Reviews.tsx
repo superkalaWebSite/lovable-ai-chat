@@ -246,7 +246,7 @@ export default function ReviewsPage() {
                       }`}
                     >
                       ❤️ {likeCount(review).toLocaleString("fa-IR")}
-                      {likeCount(review) > 0 && " — پشتیبانی دیده ✓"}
+                      {likeCount(review) > 0 && " — پسند شد ✓"}
                     </span>
                     {canLike && (
                       <Button
@@ -254,7 +254,7 @@ export default function ReviewsPage() {
                         size="sm"
                         variant={isLiked(review) ? "default" : "outline"}
                         className="h-8 gap-1 rounded-full px-3 text-xs"
-                        title="لایک نظر تا کاربر حس دیده شدن کند"
+                        title="پسندیدن این نظر"
                         onClick={() => void toggleLike(review._id)}
                       >
                         <Heart

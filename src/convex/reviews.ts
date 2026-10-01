@@ -2,8 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAccount, requireAdmin } from "./helpers";
 
-/** مقام‌هایی که می‌توانند نظر کاربران را لایک کنند (پشتیبانی و مدیران) */
-const CAN_LIKE = ["admin", "partner", "supervisor"];
+/** همه کاربران واردشده می‌توانند نظرها را لایک کنند */
 
 const SEED_REVIEWS = [
   {
@@ -59,14 +58,11 @@ export const add = mutation({
   },
 });
 
-/** لایک یا برداشتن لایک یک نظر — فقط پشتیبانی و مدیران (کاربر حس دیده شدن می‌کند) */
+/** لایک یا برداشتن لایک یک نظر — توسط هر کاربر واردشده */
 export const toggleLike = mutation({
   args: { token: v.string(), reviewId: v.id("reviews") },
   handler: async (ctx, { token, reviewId }) => {
     const account = await requireAccount(ctx, token);
-    if (!CAN_LIKE.includes(account.role)) {
-      throw new Error("فقط پشتیبانی و مدیران می‌توانند نظر را لایک کنند.");
-    }
     const review = await ctx.db.get(reviewId);
     if (!review) throw new Error("نظر یافت نشد.");
     const liked = review.likedBy ?? [];

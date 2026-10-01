@@ -490,7 +490,9 @@ export default function AdminPage() {
                     <TableHead>دسته‌بندی</TableHead>
                     <TableHead>قیمت</TableHead>
                     <TableHead>موجودی</TableHead>
-                    <TableHead className="text-left">عملیات</TableHead>
+                    <TableHead className="sticky left-0 z-10 bg-card text-left">
+                      عملیات
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -561,21 +563,21 @@ export default function AdminPage() {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
+                        <TableCell className="sticky left-0 z-10 bg-card">
+                          <div className="flex items-center gap-1">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-8"
-                              title="ویرایش"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 shrink-0 gap-1 rounded-lg border-border/70"
+                              title="دستکاری محصول"
                               onClick={() => openEditProduct(product)}
                             >
-                              <Pencil className="size-4" />
+                              <Pencil className="size-3.5" /> دستکاری
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="size-8 text-destructive hover:text-destructive"
+                              className="size-8 shrink-0 text-destructive hover:text-destructive"
                               title="حذف"
                               onClick={() => setDeleting(product)}
                             >

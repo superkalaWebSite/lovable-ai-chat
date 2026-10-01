@@ -65,7 +65,7 @@ export function SiteFooter() {
             </li>
             <li>
               <Link to="/auth" className="text-white/60 transition-colors hover:text-green-400">
-                ورود / ثبت‌نام
+                ثبت‌نام
               </Link>
             </li>
           </ul>

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATEGORIES, discountPercent, formatDate, formatPrice } from "@/lib/shop";
+import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
 import { motion } from "framer-motion";
 import {
@@ -57,6 +58,7 @@ function fadeUp(delay = 0) {
 }
 
 export default function Landing() {
+  const { isAuthenticated } = useAuth();
   const products = useQuery(api.products.list);
   const reviews = useQuery(api.reviews.list);
   const navigate = useNavigate();
@@ -65,9 +67,12 @@ export default function Landing() {
 
   const all = products ?? [];
   const featured = [...all].sort((a, b) => b.rating - a.rating).slice(0, 8);
-  const deals = all.filter((p) => p.oldPrice !== undefined).slice(0, 4);
-  // حداکثر ۳ نظر در صفحه اصلی
-  const shownReviews = (reviews ?? []).slice(0, 3);
+  // بنر تخفیف‌ها: حداکثر ۵ محصول؛ اگر بیشتر از ۵ تا بود، لینک «بیشتر» به فروشگاه
+  const discounted = all.filter((p) => p.oldPrice !== undefined);
+  const deals = discounted.slice(0, 5);
+  // حداکثر ۵ نظر در صفحه اصلی؛ اگر بیشتر از ۵ تا بود، لینک «بیشتر» به صفحه نظرات
+  const allReviews = reviews ?? [];
+  const shownReviews = allReviews.slice(0, 5);
 
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -125,14 +130,16 @@ export default function Landing() {
                   مشاهده محصولات <ArrowLeft className="size-4" />
                 </Link>
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-12 rounded-2xl px-7"
-                asChild
-              >
-                <Link to="/auth">ثبت‌نام رایگان</Link>
-              </Button>
+              {!isAuthenticated && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-12 rounded-2xl px-7"
+                  asChild
+                >
+                  <Link to="/auth">ثبت‌نام</Link>
+                </Button>
+              )}
             </div>
 
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
@@ -333,37 +340,58 @@ export default function Landing() {
 
           <div className="grid gap-3">
             {(products === undefined ? [] : deals).map((deal) => (
-              <Link
+              <button
                 key={deal._id}
-                to="/shop"
-                className="flex items-center gap-3 rounded-2xl bg-white/5 p-3 transition-colors hover:bg-white/10"
+                type="button"
+                onClick={() => setSelected(deal)}
+                className="group flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
               >
-                <span className="flex size-12 items-center justify-center rounded-xl bg-white/10 text-2xl">
-                  {deal.emoji}
+                <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-2xl">
+                  {deal.image ? (
+                    <img src={deal.image} alt="" className="size-full object-cover" />
+                  ) : (
+                    deal.emoji
+                  )}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-bold">
                     {deal.title}
                   </span>
-                  <span className="text-xs text-white/60">
-                    {formatPrice(deal.price)} تومان
+                  <span className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold text-white">
+                      {formatPrice(deal.price)} تومان
+                    </span>
+                    {deal.oldPrice !== undefined && deal.oldPrice > deal.price && (
+                      <span className="text-[11px] text-white/40 line-through">
+                        {formatPrice(deal.oldPrice)}
+                      </span>
+                    )}
+                    <span className="rounded-md bg-green-600 px-1.5 py-0.5 text-[10px] font-black">
+                      {discountPercent(deal.price, deal.oldPrice).toLocaleString("fa-IR")}٪
+                    </span>
                   </span>
                 </span>
-                <span className="rounded-lg bg-green-600 px-2 py-1 text-xs font-black">
-                  {discountPercent(deal.price, deal.oldPrice).toLocaleString("fa-IR")}٪
-                </span>
-              </Link>
+                <ArrowLeft className="size-4 shrink-0 text-white/40 transition-transform group-hover:-translate-x-0.5" />
+              </button>
             ))}
             {products !== undefined && deals.length === 0 && (
               <p className="text-sm text-white/60">
                 به‌زودی پیشنهادهای ویژه اضافه می‌شود.
               </p>
             )}
+            {products !== undefined && discounted.length > 5 && (
+              <Link
+                to="/shop"
+                className="flex items-center justify-center gap-1.5 rounded-2xl border border-dashed border-white/20 py-2.5 text-xs font-bold text-green-300 transition-colors hover:border-green-400/50 hover:bg-white/5"
+              >
+                دیدن تخفیف‌های بیشتر <ArrowLeft className="size-4" />
+              </Link>
+            )}
           </div>
         </div>
       </section>
 
-      {/* ───────────── نظرات کاربران (حداکثر ۳) ───────────── */}
+      {/* ───────────── نظرات کاربران (حداکثر ۵) ───────────── */}
       <section className="mx-auto mt-16 max-w-7xl px-4">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -383,7 +411,7 @@ export default function Landing() {
 
         {reviews === undefined ? (
           <div className="grid gap-4 md:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
+            {Array.from({ length: 6 }).map((_, index) => (
               <Skeleton key={index} className="h-44 rounded-2xl" />
             ))}
           </div>
@@ -428,21 +456,23 @@ export default function Landing() {
           </div>
         )}
 
-        {/* آیکون «بیشتر» زیر نظرات برای رفتن به صفحه همه نظرات */}
-        <div className="mt-6 flex justify-center">
-          <Button
-            variant="outline"
-            className="group gap-2 rounded-full border-border/70 px-6"
-            asChild
-            title="دیدن نظرات بیشتر"
-          >
-            <Link to="/reviews">
-              <MessageSquare className="size-4 text-primary" />
-              نظرات بیشتر
-              <ChevronDown className="size-4 transition-transform group-hover:translate-y-0.5" />
-            </Link>
-          </Button>
-        </div>
+        {/* «بیشتر» زیر نظرات — فقط وقتی بیشتر از ۵ نظر ثبت شده باشد */}
+        {allReviews.length > 5 && (
+          <div className="mt-6 flex justify-center">
+            <Button
+              variant="outline"
+              className="group gap-2 rounded-full border-border/70 px-6"
+              asChild
+              title="دیدن نظرات بیشتر"
+            >
+              <Link to="/reviews">
+                <MessageSquare className="size-4 text-primary" />
+                دیدن نظرات بیشتر
+                <ChevronDown className="size-4 transition-transform group-hover:translate-y-0.5" />
+              </Link>
+            </Button>
+          </div>
+        )}
       </section>
 
       <ProductDialog product={selected} onClose={() => setSelected(null)} />

@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { getSupportSeenAt, subscribeSupportSeen } from "@/lib/support-seen";
 import { CATEGORIES } from "@/lib/shop";
 import { useQuery } from "convex/react";
-import { LifeBuoy, LogOut, Search, ShieldCheck, ShoppingCart, UserRound } from "lucide-react";
+import { LifeBuoy, LogOut, Search, ShieldCheck, ShoppingCart, UserRound, X } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import {
   Link,
@@ -59,6 +59,13 @@ export function SiteHeader() {
   const [term, setTerm] = useState("");
   const activeCat = searchParams.get("cat") ?? "";
 
+  // دکمه ضربدر سبز «بیرون رفتن از صفحه» — در همه صفحه‌ها به جز صفحه اصلی
+  const onHome = location.pathname === "/";
+  const exitPage = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/");
+  };
+
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const q = term.trim();
@@ -86,6 +93,17 @@ export function SiteHeader() {
 
       {/* ردیف اصلی */}
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
+        {!onHome && (
+          <Button
+            size="icon"
+            onClick={exitPage}
+            title="بازگشت به صفحه قبل"
+            aria-label="بازگشت به صفحه قبل"
+            className="size-9 shrink-0 rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+          >
+            <X className="size-5" />
+          </Button>
+        )}
         <Link to="/" className="flex shrink-0 items-center gap-2">
           <img src={logo} alt="لوگوی سوپر کالا" className="size-9 rounded-xl" />
           <span className="text-lg font-black tracking-tight sm:text-xl">
@@ -208,7 +226,7 @@ export function SiteHeader() {
             <Button asChild size="sm" className="rounded-full gap-2">
               <Link to="/auth">
                 <UserRound className="size-4" />
-                ورود | ثبت‌نام
+                ثبت‌نام
               </Link>
             </Button>
           )}

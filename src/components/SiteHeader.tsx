@@ -24,7 +24,8 @@ import {
 } from "react-router";
 
 export function SiteHeader() {
-  const { user, token, isAuthenticated, isAdmin, signOut } = useAuth();
+  const { user, token, isAuthenticated, isAdmin, roleLabel, signOut } =
+    useAuth();
   const cart = useQuery(api.cart.myCart, token ? { token } : "skip");
   const thread = useQuery(
     api.support.myThread,
@@ -185,7 +186,7 @@ export function SiteHeader() {
                 <div className="px-2 py-1.5 text-sm">
                   <p className="font-bold">{user.username}</p>
                   <p className="text-xs text-muted-foreground">
-                    {isAdmin ? "مدیر سایت" : "کاربر سوپر کالا"}
+                    {user.role === "user" ? "کاربر سوپر کالا" : roleLabel}
                   </p>
                 </div>
                 <DropdownMenuSeparator />

@@ -19,7 +19,7 @@ export const adminStats = query({
     }
     return {
       products: products.length,
-      users: accounts.filter((a) => a.role === "user").length,
+      users: accounts.filter((a) => a.role !== "admin").length,
       orders: orders.length,
       messages: messages.length,
       revenue,

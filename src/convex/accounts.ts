@@ -7,6 +7,7 @@ import {
   ADMIN_USERNAME,
   normalizeUsername,
   publicAccount,
+  requireAdmin,
 } from "./helpers";
 
 /** نام کاربری رزرو شده برای مدیر سایت */
@@ -145,6 +146,42 @@ export const getCurrentUser = query({
     const account = await ctx.db.get(session.accountId);
     if (!account) return null;
     return publicAccount(account);
+  },
+});
+
+/** مقام‌های قابل انتخاب در پنل مدیریت */
+const ROLES = ["user", "supervisor", "admin", "partner"] as const;
+
+/**
+ * تغییر مقام یک کاربر لاگین‌شده (فقط مدیر سایت).
+ * حساب مدیر اصلی و حساب خودِ مدیر قابل تغییر نیستند تا کنترل پنل از دست نرود.
+ */
+export const setRole = mutation({
+  args: {
+    token: v.string(),
+    accountId: v.id("accounts"),
+    role: v.union(
+      v.literal("user"),
+      v.literal("supervisor"),
+      v.literal("admin"),
+      v.literal("partner"),
+    ),
+  },
+  handler: async (ctx, { token, accountId, role }) => {
+    const manager = await requireAdmin(ctx, token);
+    if (manager._id === accountId) {
+      throw new Error("مقام حساب خودت قابل تغییر نیست.");
+    }
+    const account = await ctx.db.get(accountId);
+    if (!account) throw new Error("کاربر یافت نشد.");
+    if (account.usernameLower === RESERVED) {
+      throw new Error("مقام مدیر اصلی سایت قابل تغییر نیست.");
+    }
+    if (!(ROLES as readonly string[]).includes(role)) {
+      throw new Error("مقام انتخاب‌شده معتبر نیست.");
+    }
+    await ctx.db.patch(accountId, { role });
+    return accountId;
   },
 });
 

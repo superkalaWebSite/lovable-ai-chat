@@ -29,12 +29,19 @@ export async function requireAccount(
   return account;
 }
 
+/** مقام‌هایی که به پنل کنترل سایت دسترسی کامل دارند */
+export const ADMIN_ROLES = ["admin", "partner"] as const;
+
+export function isAdminRole(role: string): boolean {
+  return (ADMIN_ROLES as readonly string[]).includes(role);
+}
+
 export async function requireAdmin(
   ctx: QueryCtx | MutationCtx,
   token: string,
 ): Promise<Doc<"accounts">> {
   const account = await requireAccount(ctx, token);
-  if (account.role !== "admin") {
+  if (!isAdminRole(account.role)) {
     throw new Error("شما دسترسی مدیریت ندارید.");
   }
   return account;

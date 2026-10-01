@@ -1,5 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import { friendlyError, randomSalt, sha256Hex } from "@/lib/crypto";
+import { roleInfo } from "@/lib/roles";
 import { getToken, setToken, subscribeSession } from "@/lib/session";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import { useCallback, useSyncExternalStore } from "react";
@@ -85,7 +86,9 @@ export function useAuth() {
     token,
     isLoading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
+    // «ادمین» و «شریک مدیر» هر دو به پنل کنترل سایت دسترسی کامل دارند
+    isAdmin: user?.role === "admin" || user?.role === "partner",
+    roleLabel: user ? roleInfo(user.role).label : "",
     signUp,
     signIn,
     signOut,

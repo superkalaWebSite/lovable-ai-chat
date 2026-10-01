@@ -36,6 +36,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/use-auth";
 import { friendlyError } from "@/lib/crypto";
 import { fileToDataUrl } from "@/lib/image";
+import { ACCOUNT_ROLES, roleInfo, type AccountRole } from "@/lib/roles";
 import {
   CATEGORIES,
   categoryTile,
@@ -93,6 +94,7 @@ export default function AdminPage() {
   const setStatusMutation = useMutation(api.stats.setOrderStatus);
   const supportBanMutation = useMutation(api.punishments.setSupportBan);
   const discountBanMutation = useMutation(api.punishments.setDiscountBan);
+  const roleMutation = useMutation(api.accounts.setRole);
 
   const [tab, setTab] = useState("stats");
   const [formOpen, setFormOpen] = useState(false);
@@ -149,6 +151,15 @@ export default function AdminPage() {
     const last = thread.messages[thread.messages.length - 1];
     return last?.from === "user";
   }).length;
+
+  /** فقط کاربران و دستیابی‌ها مجازات می‌گیرند؛ مدیران دست‌نخورده می‌مانند */
+  const punishable = useMemo(
+    () =>
+      (users ?? []).filter(
+        (item) => item.role !== "admin" && item.role !== "partner",
+      ),
+    [users],
+  );
 
   if (isLoading) {
     return (
@@ -214,15 +225,28 @@ export default function AdminPage() {
   ) => {
     try {
       if (kind === "support") {
-        await supportBanMutation({ token, accountId, days });
-      } else {
-        await discountBanMutation({ token, accountId, days });
-      }
-      toast.success(
+        await supportBanMutation({ token, accountId, days });        } else {
+          await discountBanMutation({ token, accountId, days });
+        }
+        if (days === -1) {
+          toast.success("مجازت همیشگی اعمال شد ♾️");
+          return;
+        }
+        toast.success(
         days > 0
           ? `مجازات ${days.toLocaleString("fa-IR")} روزه اعمال شد ⚖️`
           : "مجازات برداشته شد ✅",
       );
+    } catch (error) {
+      toast.error(friendlyError(error));
+    }
+  };
+
+  /** تغییر مقام یک کاربر (کاربر / دستیابی / ادمین / شریک مدیر) */
+  const changeRole = async (accountId: Id<"accounts">, role: AccountRole) => {
+    try {
+      await roleMutation({ token, accountId, role });
+      toast.success(`مقام کاربر «${roleInfo(role).label}» شد 👑`);
     } catch (error) {
       toast.error(friendlyError(error));
     }
@@ -235,6 +259,10 @@ export default function AdminPage() {
     }
     return `${hours.toLocaleString("fa-IR")} ساعت`;
   };
+
+  /** متن وضعیت مجازات: «همیشگی» یا مدت باقی‌مانده */
+  const banLabel = (until: number, forever: boolean) =>
+    forever ? "به‌صورت همیشگی" : `تا ${remainLabel(until)}`;
 
   const submitProduct = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -420,6 +448,9 @@ export default function AdminPage() {
           </TabsTrigger>
           <TabsTrigger value="punish" className="shrink-0 rounded-full">
             ⚖️ مجازات
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="shrink-0 rounded-full">
+            👑 مقام‌ها
           </TabsTrigger>
         </TabsList>
 
@@ -793,12 +824,13 @@ export default function AdminPage() {
             ⚖️ برای کاربرانی که به پشتیبانی بی‌احترامی کرده‌اند مجازات ثبت کنید:{" "}
             <b className="text-foreground">مسدودی گپ</b> (دیگر نتواند پیام
             بدهد) یا <b className="text-foreground">غیرفعالی تخفیف</b> (تا
-            مدت تعیین شده تخفیف نگیرد).
+            مدت تعیین شده تخفیف نگیرد). مدت مجازات می‌تواند ۱ یا ۳ روز، یا{" "}
+            <b className="text-foreground">همیشگی</b> باشد.
           </div>
 
           {users === undefined ? (
             <Skeleton className="h-40 rounded-2xl" />
-          ) : users.length === 0 ? (
+          ) : punishable.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 py-16 text-center">
               <span className="text-5xl">👥</span>
               <h3 className="mt-3 font-black">هنوز کاربری ثبت‌نام نکرده</h3>
@@ -808,7 +840,7 @@ export default function AdminPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {users.map((account) => (
+              {punishable.map((account) => (
                 <Card
                   key={account._id}
                   className="rounded-2xl border-border/70 shadow-sm"
@@ -825,6 +857,12 @@ export default function AdminPage() {
                         <p className="text-xs text-muted-foreground">
                           عضویت {formatDate(account.createdAt)}
                         </p>
+                        <span
+                          className={`mt-1 inline-flex w-fit items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${roleInfo(account.role).tone}`}
+                        >
+                          {roleInfo(account.role).emoji}{" "}
+                          {roleInfo(account.role).label}
+                        </span>
                       </div>
                     </div>
 
@@ -839,8 +877,9 @@ export default function AdminPage() {
                           }`}
                         >
                           {account.supportBanned
-                            ? `⛔ گپ بسته تا ${remainLabel(
+                            ? `⛔ گپ بسته ${banLabel(
                                 account.supportBannedUntil,
+                                account.supportBannedForever,
                               )}`
                             : "✅ گپ باز"}
                         </span>
@@ -867,6 +906,16 @@ export default function AdminPage() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs text-destructive hover:text-destructive"
+                            onClick={() =>
+                              void applyBan("support", account._id, -1)
+                            }
+                          >
+                            ♾️ همیشگی
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
                             onClick={() =>
@@ -888,8 +937,9 @@ export default function AdminPage() {
                           }`}
                         >
                           {account.discountBanned
-                            ? `⛔ تخفیف غیرفعال تا ${remainLabel(
+                            ? `⛔ تخفیف غیرفعال ${banLabel(
                                 account.discountBannedUntil,
+                                account.discountBannedForever,
                               )}`
                             : "✅ تخفیف فعال"}
                         </span>
@@ -916,6 +966,16 @@ export default function AdminPage() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="outline"
+                            className="h-7 rounded-lg px-2 text-xs text-destructive hover:text-destructive"
+                            onClick={() =>
+                              void applyBan("discount", account._id, -1)
+                            }
+                          >
+                            ♾️ همیشگی
+                          </Button>
+                          <Button
+                            size="sm"
                             variant="ghost"
                             className="h-7 rounded-lg px-2 text-xs text-muted-foreground"
                             onClick={() =>
@@ -930,6 +990,94 @@ export default function AdminPage() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* ───── مقام‌ها ───── */}
+        <TabsContent value="roles" className="mt-6">
+          <div className="mb-4 rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-xs leading-6 text-muted-foreground">
+            👑 به هر کاربر لاگین‌شده می‌توانی مقام بدهی یا آن را عوض کنی:{" "}
+            <b className="text-foreground">کاربر</b> (حساب عادی)،{" "}
+            <b className="text-foreground">دستیابی</b> (ناظر پشتیبانی)،{" "}
+            <b className="text-foreground">ادمین</b> (دسترسی کامل به پنل) و{" "}
+            <b className="text-foreground">شریک مدیر</b> (بالاترین مقام، مثل
+            مالک سایت). تغییر مقام بلافاصله اعمال می‌شود.
+          </div>
+
+          {users === undefined ? (
+            <Skeleton className="h-32 rounded-2xl" />
+          ) : users.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-border/70 py-16 text-center">
+              <span className="text-5xl">👥</span>
+              <h3 className="mt-3 font-black">هنوز کاربری ثبت‌نام نکرده</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                به‌محض ثبت‌نام کاربران، می‌توانی به آن‌ها مقام بدهی.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {users.map((account) => {
+                const current = roleInfo(account.role);
+                const locked = account._id === user?._id;
+                return (
+                  <Card
+                    key={account._id}
+                    className="rounded-2xl border-border/70 shadow-sm"
+                  >
+                    <CardContent className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
+                      <div className="flex min-w-56 items-center gap-3">
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-foreground text-sm font-black text-white">
+                          {account.username.slice(0, 1)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-black">
+                            {account.username}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            عضویت {formatDate(account.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-1 flex-wrap items-center gap-2">
+                        {ACCOUNT_ROLES.map((role) => (
+                          <Button
+                            key={role.value}
+                            size="sm"
+                            variant={
+                              account.role === role.value
+                                ? "default"
+                                : "outline"
+                            }
+                            disabled={locked}
+                            title={role.hint}
+                            className="h-8 gap-1 rounded-lg px-3 text-xs"
+                            onClick={() =>
+                              void changeRole(account._id, role.value)
+                            }
+                          >
+                            {role.emoji} {role.label}
+                          </Button>
+                        ))}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-bold ${current.tone}`}
+                        >
+                          مقام فعلی: {current.emoji} {current.label}
+                        </span>
+                        {locked && (
+                          <span className="text-[10px] text-muted-foreground">
+                            حساب شما
+                          </span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </TabsContent>

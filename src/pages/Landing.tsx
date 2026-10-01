@@ -360,7 +360,7 @@ export default function Landing() {
                 key={deal._id}
                 type="button"
                 onClick={() => setSelected(deal)}
-                className="group flex items-center gap-3 rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
+                className="group flex items-center justify-center gap-3 rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
               >
                 <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-2xl">
                   {deal.image ? (
@@ -369,7 +369,7 @@ export default function Landing() {
                     deal.emoji
                   )}
                 </span>
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 max-w-[78%]">
                   <span className="block truncate text-sm font-bold">
                     {deal.title}
                   </span>

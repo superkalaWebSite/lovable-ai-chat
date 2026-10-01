@@ -4,6 +4,10 @@ import { mutation, query, type MutationCtx } from "./_generated/server";
 import { requireAdmin } from "./helpers";
 
 const DAY = 24 * 60 * 60 * 1000;
+/** مجازات «همیشگی» با یک تاریخ دور ذخیره می‌شود (۱۰۰ سال دیگر) */
+const PERMANENT_YEARS = 100;
+/** اگر زمان باقی‌مانده از این حد بیشتر باشد، مجازات «همیشگی» حساب می‌شود */
+const FOREVER_THRESHOLD = 10 * 365 * DAY;
 
 /** لیست کاربران به همراه وضعیت مجازات (فقط مدیر) */
 export const listUsers = query({
@@ -13,15 +17,19 @@ export const listUsers = query({
     const now = Date.now();
     const accounts = await ctx.db.query("accounts").collect();
     return accounts
-      .filter((account) => account.role === "user")
       .map((account) => ({
         _id: account._id,
         username: account.username,
+        role: account.role,
         createdAt: account.createdAt,
         supportBannedUntil: account.supportBannedUntil ?? 0,
         discountBannedUntil: account.discountBannedUntil ?? 0,
         supportBanned: (account.supportBannedUntil ?? 0) > now,
         discountBanned: (account.discountBannedUntil ?? 0) > now,
+        supportBannedForever:
+          (account.supportBannedUntil ?? 0) - now > FOREVER_THRESHOLD,
+        discountBannedForever:
+          (account.discountBannedUntil ?? 0) - now > FOREVER_THRESHOLD,
       }))
       .sort((a, b) => b.createdAt - a.createdAt);
   },
@@ -32,13 +40,22 @@ async function setBan(
   args: { token: string; accountId: Id<"accounts">; days: number },
   field: "supportBannedUntil" | "discountBannedUntil",
 ) {
-  await requireAdmin(ctx, args.token);
-  if (args.days < 0 || args.days > 30) {
-    throw new Error("مدت مجازات باید بین ۰ تا ۳۰ روز باشد.");
+  const manager = await requireAdmin(ctx, args.token);
+  // ۰ = رفع مجازات، ۱ تا ۳۰ = روز، -۱ = همیشگی
+  if (args.days !== -1 && (args.days < 0 || args.days > 30)) {
+    throw new Error("مدت مجازات باید ۰ (رفع)، ۱ تا ۳۰ روز یا همیشگی باشد.");
   }
   const account = await ctx.db.get(args.accountId);
   if (!account) throw new Error("کاربر یافت نشد.");
-  const until = args.days > 0 ? Date.now() + args.days * DAY : 0;
+  if (manager._id === account._id) {
+    throw new Error("نمی‌توانی برای حساب خودت مجازات ثبت کنی.");
+  }
+  const until =
+    args.days === -1
+      ? Date.now() + PERMANENT_YEARS * 365 * DAY
+      : args.days > 0
+        ? Date.now() + args.days * DAY
+        : 0;
   if (field === "supportBannedUntil") {
     await ctx.db.patch(args.accountId, { supportBannedUntil: until });
   } else {

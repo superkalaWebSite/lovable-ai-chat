@@ -38,7 +38,13 @@ const schema = defineSchema(
       usernameLower: v.string(),
       salt: v.string(),
       passwordHash: v.string(),
-      role: v.union(v.literal("admin"), v.literal("user")),
+      /** مقام کاربر: user (کاربر) | supervisor (دستیابی) | admin (ادمین) | partner (شریک مدیر) */
+      role: v.union(
+        v.literal("user"),
+        v.literal("supervisor"),
+        v.literal("admin"),
+        v.literal("partner"),
+      ),
       createdAt: v.number(),
       // مجازات‌های مدیر (تا چه زمانی فعال است؛ 0 یا نداشتن = بدون مجازات)
       supportBannedUntil: v.optional(v.number()),

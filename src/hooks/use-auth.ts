@@ -82,11 +82,11 @@ export function useAuth() {
   }, [logoutMutation]);
 
   const role = user?.role;
-  // «ادمین» و «شریک مدیر» به بخش‌های مدیریتی پنل دسترسی دارند
-  const isAdmin = role === "admin" || role === "partner";
+  // ادمین به بخش‌های مدیریتی پنل دسترسی دارد
+  const isAdmin = role === "admin";
   // پشتیبانی فقط گفتگوی کاربران را می‌بیند
   const isSupervisor = role === "supervisor";
-  // هر کسی که به پنل کنترل سایت راه دارد (پشتیبانی، ادمین، شریک مدیر)
+  // هر کسی که به پنل کنترل سایت راه دارد
   const canUsePanel = isAdmin || isSupervisor;
   // مالک سایت: بالاترین مقام؛ دسترسی کامل و غیرقابل تغییر
   const isOwner = !!user && isOwnerAccountInfo(user);

@@ -22,7 +22,15 @@ import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
 export default function ProfilePage() {
-  const { user, token, canUsePanel, isAdmin, isOwner, signOut } = useAuth();
+  const {
+    user,
+    token,
+    canUsePanel,
+    isAdmin,
+    isSupervisor,
+    isOwner,
+    signOut,
+  } = useAuth();
   const cart = useQuery(api.cart.myCart, token ? { token } : "skip");
   const orders = useQuery(api.cart.myOrders, token ? { token } : "skip");
   const navigate = useNavigate();
@@ -39,11 +47,12 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const role = roleInfoFor(user);
+  const panelTitle = isSupervisor ? "گپ پشتیبانی" : "پنل کنترل سایت";
   const panelHint = isOwner
-    ? "مالک سایت — دسترسی کامل"
-    : isAdmin
-      ? "کالاها، مجازات و گپ کاربران"
-      : "پاسخ به گپ کاربران";
+    ? "مدیر سایت — دسترسی کامل"
+    : isSupervisor
+      ? "فقط پاسخ به گپ کاربران"
+      : "کالاها، مجازات و گپ کاربران";
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
@@ -126,9 +135,7 @@ export default function ProfilePage() {
                   <ShieldCheck className="size-5" />
                 </span>
                 <span>
-                  <span className="block text-sm font-black">
-                    پنل کنترل سایت
-                  </span>
+                  <span className="block text-sm font-black">{panelTitle}</span>
                   <span className="text-xs text-white/60">{panelHint}</span>
                 </span>
                 <ArrowLeft className="ms-auto size-4 text-white/60 transition-transform group-hover:-translate-x-1" />

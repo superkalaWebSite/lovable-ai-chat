@@ -200,8 +200,8 @@ export default function AdminPage() {
 
   /**
    * دسترسی هر مقام به تب‌های پنل:
-   * - شریک مدیر / مدیر اصلی: همه‌ی بخش‌ها
-   * - ادمین: فقط کالاها، مجازات و گپ کاربران
+   * - مدیر سایت: همه‌ی بخش‌ها
+   * - ادمین: کالاها، گپ کاربران، مجازات و تغییر مقام
    * - پشتیبانی: فقط گپ کاربران
    */
   const allowedTabs: string[] = useMemo(() => {
@@ -217,9 +217,17 @@ export default function AdminPage() {
         "promo",
       ];
     }
-    if (isAdmin) return ["products", "chat", "punish"];
+    // ادمین: کالاها، گپ کاربران، مجازات و تغییر مقام (بدون آمار/سفارش/نظرها/بنر)
+    if (isAdmin) return ["products", "chat", "punish", "roles"];
     return ["chat"];
   }, [isOwner, isAdmin]);
+
+  // مقام‌هایی که این کاربر اجازه تعیین کردنشان را دارد (هرگز بالاتر از سطح خودش)
+  const assignableRoles: readonly AccountRole[] = isOwner
+    ? ACCOUNT_ROLES.map((item) => item.value)
+    : isAdmin
+      ? ["user", "supervisor"]
+      : [];
 
   useEffect(() => {
     if (!allowedTabs.includes(tab)) setTab(allowedTabs[0]);
@@ -1258,25 +1266,26 @@ export default function AdminPage() {
                       </div>
 
                       <div className="flex flex-1 flex-wrap items-center gap-2">
-                        {ACCOUNT_ROLES.map((role) => (
-                          <Button
-                            key={role.value}
-                            size="sm"
-                            variant={
-                              account.role === role.value
-                                ? "default"
-                                : "outline"
-                            }
-                            disabled={locked}
-                            title={role.hint}
-                            className="h-8 gap-1 rounded-lg px-3 text-xs"
-                            onClick={() =>
-                              void changeRole(account._id, role.value)
-                            }
-                          >
-                            {role.emoji} {role.label}
-                          </Button>
-                        ))}
+                        {assignableRoles.map((value) => {
+                          const info = roleInfo(value);
+                          return (
+                            <Button
+                              key={value}
+                              size="sm"
+                              variant={
+                                account.role === value ? "default" : "outline"
+                              }
+                              disabled={locked}
+                              title={info.hint}
+                              className="h-8 gap-1 rounded-lg px-3 text-xs"
+                              onClick={() =>
+                                void changeRole(account._id, value)
+                              }
+                            >
+                              {info.emoji} {info.label}
+                            </Button>
+                          );
+                        })}
                       </div>
 
                       <div className="flex items-center gap-2">

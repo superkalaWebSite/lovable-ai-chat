@@ -357,7 +357,7 @@ export default function Landing() {
             </div>
           </div>
 
-          <div className="grid gap-3">
+          <div className="mx-auto grid w-full max-w-md gap-3">
             {(products === undefined ? [] : deals).map((deal) => (
               <button
                 key={deal._id}
@@ -365,7 +365,7 @@ export default function Landing() {
                 onClick={() => setSelected(deal)}
                 className="group w-full rounded-2xl bg-white/5 p-3 text-start transition-colors hover:bg-white/10"
               >
-                <span className="mx-auto flex w-full max-w-xs items-center gap-2.5 sm:max-w-md">
+                <span className="mx-auto flex w-fit max-w-full items-center gap-2.5">
                   <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/10 text-2xl">
                     {deal.image ? (
                       <img src={deal.image} alt="" className="size-full object-cover" />
@@ -373,11 +373,11 @@ export default function Landing() {
                       deal.emoji
                     )}
                   </span>
-                  <span className="min-w-0 flex-1">
+                  <span className="min-w-0 max-w-[190px]">
                     <span className="block truncate text-sm font-bold">
                       {deal.title}
                     </span>
-                    <span className="mt-1 flex items-center gap-2 overflow-hidden whitespace-nowrap">
+                    <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="shrink-0 text-xs font-bold text-white">
                         {formatPrice(deal.price)} تومان
                       </span>

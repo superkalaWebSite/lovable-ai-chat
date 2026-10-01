@@ -9,10 +9,10 @@ export const ACCOUNT_ROLES = [
   },
   {
     value: "supervisor",
-    label: "دستیابی",
-    emoji: "🛡️",
+    label: "پشتیبانی",
+    emoji: "🎧",
     tone: "bg-sky-100 text-sky-700",
-    hint: "ناظر پشتیبانی و سفارش‌ها",
+    hint: "مسئول گفتگوی پشتیبانی با کاربران",
   },
   {
     value: "admin",

@@ -38,7 +38,7 @@ const schema = defineSchema(
       usernameLower: v.string(),
       salt: v.string(),
       passwordHash: v.string(),
-      /** مقام کاربر: user (کاربر) | supervisor (دستیابی) | admin (ادمین) | partner (شریک مدیر) */
+      /** مقام کاربر: user (کاربر) | supervisor (پشتیبانی) | admin (ادمین) | partner (شریک مدیر) */
       role: v.union(
         v.literal("user"),
         v.literal("supervisor"),
